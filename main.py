@@ -241,8 +241,6 @@ def create_12_month_net_worth_plot(axes: pyplot.Axes, sources: List[Data]):
         "this year": axes.bar(months, this_year_values),
         "last year": axes.bar(months, last_year_values, width=0.5),
     }
-    axes.set_xlabel("Month")
-    axes.set_ylabel("Value")
     axes.set_title("Net Worth (Last 12 Months)")
     axes.set_xticks(xticks, rotation=45, labels=xtick_labels)
     axes.yaxis.set_major_formatter(FuncFormatter(lambda value, position: f"${value / 1000:.0f}k"))
@@ -342,13 +340,40 @@ def create_spending_plot(axes: pyplot.Axes, credit: EventData):
     axes.plot([], []); axes.plot([], []); axes.plot([], []); # force new colors
     axes.plot(months, this_year_moving_average, label="this year")
     axes.plot(months, last_year_moving_average, label="last year")
-    axes.set_xlabel("Month")
-    axes.set_ylabel("Value")
     axes.set_title("Credit Card Spending (Last 12 Months)")
     axes.set_xticks(xticks, rotation=45, labels=xtick_labels)
     axes.yaxis.set_major_formatter(FuncFormatter(lambda value, position: f"${value / 1000:.0f}k"))
     axes.legend(loc="lower center", ncols=3)
 
+
+def create_all_time_net_worth_plot(axes: pyplot.Axes, sources: List[Data]):
+    today = datetime.now().date()
+    first_month = datetime(2013, 9, 1).date()
+
+    months = 12 * (today.year - first_month.year) + (today.month - first_month.month)
+
+    df = pandas.DataFrame({
+        "month": [(today - relativedelta(months=i)).strftime("%Y-%m") for i in range(0, months)],
+        "value": [float(0) for _ in range(months)],
+    }).sort_values(by=["month"], ascending=True).reset_index()
+
+    for source in sources:
+        value_by_month = source.value_by_month(months=months).rename(columns={"value": "source_value"})
+        df = pandas.merge(df, value_by_month, on="month", how="left").fillna(float(0))
+        df["value"] = df["value"] + df["source_value"]
+        del df["source_value"]
+
+    months = df["month"]
+    values = df["value"]
+
+    axes.plot(months, values)
+
+    xticks = months[months.apply(lambda month: month[-3:] == "-01")][::2]
+    xtick_labels = xticks.apply(lambda month: month[:-3])
+
+    axes.set_title("Net Worth (All Time)")
+    axes.set_xticks(xticks, rotation=45, labels=xtick_labels)
+    axes.yaxis.set_major_formatter(FuncFormatter(lambda value, position: f"${value / 1000:.0f}k"))
 
 def main():
     locale.setlocale(locale.LC_ALL, '')
@@ -370,6 +395,7 @@ def main():
         create_spending_plot(figure.add_subplot(grid[0, 2]), credit)
         create_monthly_movers_plot(figure.add_subplot(grid[1, 0]), sources)
         create_asset_categorization_plot(figure.add_subplot(grid[1, 1]), sources)
+        create_all_time_net_worth_plot(figure.add_subplot(grid[1, 2]), sources)
 
         figure.subplots_adjust(top=0.9, bottom=0.1, left=0.1, right=0.95, hspace=1)
 
