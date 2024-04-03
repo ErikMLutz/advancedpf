@@ -287,7 +287,7 @@ def create_asset_categorization_plot(axes: pyplot.Axes, sources: List[Data]):
         axes.bar("assets", row["value"], bottom=bottom, label=row["category"])
         bottom += row["value"]
 
-    axes.set_title("Asset Categorization (This Month)")
+    axes.set_title("Net Asset Categorization")
     axes.yaxis.set_major_formatter(FuncFormatter(lambda value, position: f"${value / 1000:.0f}k"))
     axes.grid(False)
     axes.axis(False)
@@ -303,15 +303,25 @@ def create_asset_categorization_plot(axes: pyplot.Axes, sources: List[Data]):
         )
         text.set_path_effects([PathEffects.withStroke(linewidth=1.5, foreground='black')])
 
-def create_stats_plot(axes: pyplot.Axes, sources: List[Data]):
+def create_stats_plot(axes: pyplot.Axes, sources: List[Data], assets: List[Data], liabilities: List[Data]):
     df = compute_value_over_last_12_months(sources)
 
     net_worth = list(df["value"])[-1]
     net_worth_last_month = list(df["value"])[-2]
     net_worth_last_year = list(df["last_year_value"])[-1]
 
+    df_assets = compute_value_over_last_12_months(assets)
+    df_liabilities = compute_value_over_last_12_months(liabilities)
+
+    total_assets = list(df_assets["value"])[-1]
+    total_liabilities = list(df_liabilities["value"])[-1]
+
     stats = textwrap.dedent(f"""
     Net Worth: {locale.currency(net_worth, grouping=True)}
+
+    Total Assets: {locale.currency(total_assets, grouping=True)}
+
+    Total Liabilities: {locale.currency(total_liabilities, grouping=True)}
 
     Last 1 Month Change: {locale.currency(net_worth - net_worth_last_month, grouping=True)}
 
@@ -379,19 +389,19 @@ def main():
     locale.setlocale(locale.LC_ALL, '')
 
     cash = SnapshotData("cash", "data/cash.csv")
-    assets = SnapshotData("property", "data/property.csv")
+    property_ = SnapshotData("property", "data/property.csv")
     debt = SnapshotData("debt", "data/debt.csv")
     credit = EventData("credit", "data/credit.csv")
     securities= SnapshotData("securities", "data/securities.csv")
 
-    sources = [cash, assets, debt, credit, securities]
+    sources = [cash, property_, debt, credit, securities]
 
     with pyplot.style.context("./themes/rose-pine-moon.mplstyle"):
         figure = pyplot.figure(figsize=(12, 7))
         grid = pyplot.GridSpec(2, 3, figure=figure)
 
         create_12_month_net_worth_plot(figure.add_subplot(grid[0, 0]), sources)
-        create_stats_plot(figure.add_subplot(grid[0, 1]), sources)
+        create_stats_plot(figure.add_subplot(grid[0, 1]), sources, [property_, securities, cash], [debt])
         create_spending_plot(figure.add_subplot(grid[0, 2]), credit)
         create_monthly_movers_plot(figure.add_subplot(grid[1, 0]), sources)
         create_asset_categorization_plot(figure.add_subplot(grid[1, 1]), sources)
