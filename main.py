@@ -303,7 +303,7 @@ def create_asset_categorization_plot(axes: pyplot.Axes, sources: List[Data]):
         )
         text.set_path_effects([PathEffects.withStroke(linewidth=1.5, foreground='black')])
 
-def create_stats_plot(axes: pyplot.Axes, sources: List[Data], assets: List[Data], liabilities: List[Data]):
+def create_stats_plot(axes: pyplot.Axes, sources: List[Data], assets: List[Data], liabilities: List[Data], credit: List[Data]):
     df = compute_value_over_last_12_months(sources)
 
     net_worth = list(df["value"])[-1]
@@ -316,6 +316,10 @@ def create_stats_plot(axes: pyplot.Axes, sources: List[Data], assets: List[Data]
     total_assets = list(df_assets["value"])[-1]
     total_liabilities = list(df_liabilities["value"])[-1]
 
+    df_credit = compute_value_over_last_12_months(credit)
+    total_credit_card_spending_this_year = sum(df_credit["value"])
+    total_credit_card_spending_last_year = sum(df_credit["last_year_value"])
+
     stats = textwrap.dedent(f"""
     Net Worth: {locale.currency(net_worth, grouping=True)}
 
@@ -326,6 +330,10 @@ def create_stats_plot(axes: pyplot.Axes, sources: List[Data], assets: List[Data]
     Last 1 Month Change: {locale.currency(net_worth - net_worth_last_month, grouping=True)}
 
     Last 12 Months Change: {locale.currency(net_worth - net_worth_last_year, grouping=True)}
+
+    Credit Card Spend:
+        Last 12 Months: {locale.currency(-1 * total_credit_card_spending_this_year, grouping=True)}
+        Previous 12 Months: {locale.currency(-1 * total_credit_card_spending_last_year, grouping=True)}
     """).strip()
 
     axes.text(0, 0.9, stats, horizontalalignment="left", verticalalignment="top")
@@ -401,7 +409,7 @@ def main():
         grid = pyplot.GridSpec(2, 3, figure=figure)
 
         create_12_month_net_worth_plot(figure.add_subplot(grid[0, 0]), sources)
-        create_stats_plot(figure.add_subplot(grid[0, 1]), sources, [property_, securities, cash], [debt])
+        create_stats_plot(figure.add_subplot(grid[0, 1]), sources, [property_, securities, cash], [debt], [credit])
         create_spending_plot(figure.add_subplot(grid[0, 2]), credit)
         create_monthly_movers_plot(figure.add_subplot(grid[1, 0]), sources)
         create_asset_categorization_plot(figure.add_subplot(grid[1, 1]), sources)
