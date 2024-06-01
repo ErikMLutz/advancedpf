@@ -322,14 +322,10 @@ def create_stats_plot(axes: pyplot.Axes, sources: List[Data], assets: List[Data]
 
     stats = textwrap.dedent(f"""
     Net Worth: {locale.currency(net_worth, grouping=True)}
-
-    Total Assets: {locale.currency(total_assets, grouping=True)}
-
-    Total Liabilities: {locale.currency(total_liabilities, grouping=True)}
-
-    Last 1 Month Change: {locale.currency(net_worth - net_worth_last_month, grouping=True)}
-
-    Last 12 Months Change: {locale.currency(net_worth - net_worth_last_year, grouping=True)}
+        Assets: {locale.currency(total_assets, grouping=True)}
+        Liabilities: {locale.currency(total_liabilities, grouping=True)}
+        1 Month Change: {locale.currency(net_worth - net_worth_last_month, grouping=True)}
+        1 Year Change: {locale.currency(net_worth - net_worth_last_year, grouping=True)}
 
     Credit Card Spend:
         Last 12 Months: {locale.currency(-1 * total_credit_card_spending_this_year, grouping=True)}
