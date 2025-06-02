@@ -103,8 +103,7 @@ class SnapshotData(Data):
             .sort_values(by=["month", "account"], ascending=True)
 
         # forward fill any missing data, and fill any further missing data with zeros
-        output["value"] = output.groupby("account")["value"].ffill()
-        output["value"] = output.groupby("account")["value"].fillna(0)
+        output["value"] = output.groupby("account")["value"].ffill().fillna(0)
 
         # now left join to only the months we care about
         output = pandas.merge(months, output, on=["month", "account"], how="left")
