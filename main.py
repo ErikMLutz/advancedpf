@@ -398,17 +398,18 @@ def main():
     securities= SnapshotData("securities", "data/securities.csv")
 
     sources = [cash, property_, debt, credit, securities]
+    sources_less_credit = [cash, property_, debt, securities]
 
     with pyplot.style.context("./themes/rose-pine-moon.mplstyle"):
         figure = pyplot.figure(figsize=(12, 7))
         grid = pyplot.GridSpec(2, 3, figure=figure)
 
-        create_12_month_net_worth_plot(figure.add_subplot(grid[0, 0]), sources)
-        create_stats_plot(figure.add_subplot(grid[0, 1]), sources, [property_, securities, cash], [debt], [credit])
+        create_12_month_net_worth_plot(figure.add_subplot(grid[0, 0]), sources_less_credit)
+        create_stats_plot(figure.add_subplot(grid[0, 1]), sources_less_credit, [property_, securities, cash], [debt], [credit])
         create_spending_plot(figure.add_subplot(grid[0, 2]), credit)
         create_monthly_movers_plot(figure.add_subplot(grid[1, 0]), sources)
-        create_asset_categorization_plot(figure.add_subplot(grid[1, 1]), sources)
-        create_all_time_net_worth_plot(figure.add_subplot(grid[1, 2]), sources)
+        create_asset_categorization_plot(figure.add_subplot(grid[1, 1]), sources_less_credit)
+        create_all_time_net_worth_plot(figure.add_subplot(grid[1, 2]), sources_less_credit)
 
         figure.subplots_adjust(top=0.9, bottom=0.1, left=0.1, right=0.95, hspace=1)
 
