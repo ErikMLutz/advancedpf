@@ -271,7 +271,21 @@ def create_asset_categorization_plot(axes: pyplot.Axes, sources: List[Data]):
     assets = assets[assets["type"] != "debt"]
 
     # create and aggregate by categories
-    assets["category"] = assets["retirement"].map(lambda value: "retirement " if value else "") + assets["type"]
+    assets["category"] = ""
+
+    def categorize(row):
+        row.category = row.type
+
+        if row.retirement is True:
+            row.category = "retirement " + row.category
+
+        if row.primary_residence is True:
+            row.category = "primary residence"
+
+        return row
+
+    assets = assets.apply(categorize, axis=1)
+
     assets = assets.groupby("category").agg({"value": "sum"}).sort_values(by=["category"]).reset_index()
 
     # create proportion column
