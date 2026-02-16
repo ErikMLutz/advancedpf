@@ -88,7 +88,7 @@ function createAllTimeNetWorthChart(canvasId, data, classified) {
                         }
                     },
                     grid: {
-                        color: classified.backgroundAlt + '40' // Add transparency
+                        color: classified.backgroundAlt
                     }
                 },
                 y: {
@@ -103,7 +103,7 @@ function createAllTimeNetWorthChart(canvasId, data, classified) {
                         }
                     },
                     grid: {
-                        color: classified.backgroundAlt + '40' // Add transparency
+                        color: classified.backgroundAlt
                     }
                 }
             }

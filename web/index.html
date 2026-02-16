@@ -526,8 +526,8 @@
                     :style="`color: ${textColor};`">
                     AdvancedPF
                 </h1>
-                <p class="text-xl font-light tracking-wider opacity-70"
-                   :style="`color: ${textColor};`">
+                <p class="text-xl font-light tracking-wider"
+                   :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
                     personal finance: simple, local.
                 </p>
             </div>
@@ -541,8 +541,8 @@
                             :style="`color: ${theme ? theme.classified.text : textColor};`">
                             Net Worth
                         </h2>
-                        <p class="text-sm font-light opacity-70"
-                           :style="`color: ${theme ? theme.classified.text : textColor};`">
+                        <p class="text-xl font-light"
+                           :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
                             all time
                         </p>
                     </div>
@@ -567,8 +567,8 @@
                 <div x-show="!hasError" class="w-full grid grid-cols-2 gap-8 mb-8">
                     <!-- Left: 12 Month Net Worth -->
                     <div>
-                        <h2 class="text-2xl font-light mb-4"
-                            :style="`color: ${theme ? theme.classified.text : textColor};`">
+                        <h2 class="text-xl font-light mb-4"
+                            :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
                             last twelve months
                         </h2>
                         <div style="position: relative; height: 400px; width: 100%;">

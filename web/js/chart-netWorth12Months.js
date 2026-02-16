@@ -104,7 +104,7 @@ function create12MonthNetWorthChart(canvasId, data, classified) {
                         }
                     },
                     grid: {
-                        color: classified.backgroundAlt + '40'
+                        color: classified.backgroundAlt
                     }
                 },
                 y: {
@@ -119,7 +119,7 @@ function create12MonthNetWorthChart(canvasId, data, classified) {
                         }
                     },
                     grid: {
-                        color: classified.backgroundAlt + '40'
+                        color: classified.backgroundAlt
                     }
                 }
             }
