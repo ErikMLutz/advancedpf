@@ -17,6 +17,14 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
+    <!-- Papa Parse (CSV parsing) -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+    <!-- Configuration and Data -->
+    <script src="js/config.js"></script>
+    <script src="js/dataLoader.js"></script>
+    <script src="js/dataProcessing.js"></script>
+
     <!-- Color Schemes -->
     <script src="js/colorSchemes.js"></script>
     <script src="js/colorClassifier.js"></script>
@@ -201,7 +209,16 @@
                         :style="`color: ${colorScheme ? colorScheme.classified.text : textColor};`">
                         Net Worth
                     </h2>
-                    <div style="position: relative; height: 400px; width: 100%;">
+
+                    <!-- Error Message -->
+                    <div x-show="dataLoadError" class="p-6 border" :style="`border-color: ${colorScheme ? colorScheme.classified.backgroundAlt : '#ccc'}; color: ${textColor};`">
+                        <p class="font-light mb-2">⚠️ Failed to load data</p>
+                        <p class="text-sm opacity-70" x-text="dataLoadError"></p>
+                        <p class="text-sm opacity-70 mt-4">Run: <code class="px-2 py-1" :style="`background-color: ${colorScheme ? colorScheme.classified.backgroundAlt : '#f0f0f0'};`">just serve --generate-sample-data</code></p>
+                    </div>
+
+                    <!-- Chart -->
+                    <div x-show="!dataLoadError" style="position: relative; height: 400px; width: 100%;">
                         <canvas id="netWorthChart"></canvas>
                     </div>
                 </div>
@@ -227,10 +244,11 @@
                 colorScheme: null,
                 settingsOpen: false,
                 netWorthData: null,
+                dataLoadError: null,
 
-                init() {
+                async init() {
                     this.loadColorScheme();
-                    this.loadData();
+                    await this.loadData();
                     this.renderCharts();
                 },
 
@@ -240,18 +258,84 @@
                     this.textColor = this.colorScheme.classified.text;
                 },
 
-                loadData() {
-                    // Generate fake data (will be replaced with real data later)
-                    this.netWorthData = generateFakeNetWorthData();
+                async loadData() {
+                    try {
+                        // Load all CSV files
+                        const rawData = await loadAllData();
+
+                        // Create data source objects (matching main.py structure)
+                        const cash = new SnapshotData('cash', rawData.cash);
+                        const property = new SnapshotData('property', rawData.property);
+                        const debt = new SnapshotData('debt', rawData.debt);
+                        const securities = new SnapshotData('securities', rawData.securities);
+                        const credit = new EventData('credit', rawData.credit);
+
+                        // Combine sources (exclude credit from net worth)
+                        const sources = [cash, property, debt, securities];
+
+                        // Find the actual date range from the data
+                        const allDates = [
+                            ...rawData.cash.map(d => d.date),
+                            ...rawData.property.map(d => d.date),
+                            ...rawData.debt.map(d => d.date),
+                            ...rawData.securities.map(d => d.date)
+                        ];
+
+                        if (allDates.length === 0) {
+                            throw new Error('No data found in CSV files');
+                        }
+
+                        const minDate = new Date(Math.min(...allDates));
+                        const maxDate = new Date(Math.max(...allDates));
+
+                        // Calculate months between min and max
+                        const monthsDiff = (maxDate.getFullYear() - minDate.getFullYear()) * 12 +
+                                          (maxDate.getMonth() - minDate.getMonth()) + 1;
+
+                        // Get data for all months in the actual range
+                        const monthSkeleton = createMonthSkeleton(monthsDiff);
+                        const monthValues = monthSkeleton.map(month => {
+                            let total = 0;
+                            sources.forEach(source => {
+                                const monthData = source.valueByMonth(monthsDiff);
+                                const dataPoint = monthData.find(d => d.month === month);
+                                if (dataPoint) {
+                                    total += dataPoint.value;
+                                }
+                            });
+                            return { month, value: total };
+                        });
+
+                        // Filter to only months with data (non-zero values)
+                        const filteredData = monthValues.filter(d => d.value !== 0);
+
+                        if (filteredData.length === 0) {
+                            throw new Error('No non-zero data found');
+                        }
+
+                        this.netWorthData = {
+                            months: filteredData.map(d => d.month),
+                            values: filteredData.map(d => d.value)
+                        };
+
+                        this.dataLoadError = null;
+
+                    } catch (error) {
+                        console.error('Failed to load data:', error);
+                        this.dataLoadError = error.message;
+                        this.netWorthData = null;
+                    }
                 },
 
                 renderCharts() {
-                    // Render net worth chart
-                    createAllTimeNetWorthChart(
-                        'netWorthChart',
-                        this.netWorthData,
-                        this.colorScheme.classified
-                    );
+                    // Only render if data loaded successfully
+                    if (this.netWorthData && !this.dataLoadError) {
+                        createAllTimeNetWorthChart(
+                            'netWorthChart',
+                            this.netWorthData,
+                            this.colorScheme.classified
+                        );
+                    }
                 },
 
                 switchScheme(schemeName) {

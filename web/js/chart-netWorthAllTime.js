@@ -109,37 +109,3 @@ function createAllTimeNetWorthChart(canvasId, data, classified) {
     });
 }
 
-/**
- * Generate fake data for all-time net worth chart
- * Data schema matches main.py: array of {month, value} objects
- * @returns {Object} - Object with months and values arrays
- */
-function generateFakeNetWorthData() {
-    const data = {
-        months: [],
-        values: []
-    };
-
-    // Generate 10 years of data (120 months)
-    const startYear = 2015;
-    const startValue = 50000;
-    const endValue = 500000;
-    const volatility = 0.1; // 10% random variation
-
-    for (let i = 0; i < 120; i++) {
-        const year = startYear + Math.floor(i / 12);
-        const month = (i % 12) + 1;
-        const monthStr = `${year}-${month.toString().padStart(2, '0')}`;
-
-        // Linear growth with some random variation
-        const progress = i / 119;
-        const baseValue = startValue + (endValue - startValue) * progress;
-        const randomVariation = (Math.random() - 0.5) * 2 * volatility * baseValue;
-        const value = Math.max(0, baseValue + randomVariation);
-
-        data.months.push(monthStr);
-        data.values.push(value);
-    }
-
-    return data;
-}
