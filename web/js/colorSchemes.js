@@ -35,6 +35,21 @@ const COLOR_SCHEMES = {
             '#000000', // black
             '#ffffff'  // white
         ]
+    },
+    oceanSunset: {
+        name: 'Ocean Sunset',
+        colors: [
+            '#001219', // ink_black
+            '#005f73', // dark_teal
+            '#0a9396', // dark_cyan
+            '#94d2bd', // pearl_aqua
+            '#e9d8a6', // vanilla_custard
+            '#ee9b00', // golden_orange
+            '#ca6702', // burnt_caramel
+            '#bb3e03', // rusty_spice
+            '#ae2012', // oxidized_iron
+            '#9b2226'  // brown_red
+        ]
     }
     // Add more schemes here as needed
 };

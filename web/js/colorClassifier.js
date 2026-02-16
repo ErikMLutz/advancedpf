@@ -121,13 +121,34 @@ function classifyColors(colors) {
         }
     }
 
+    // Accent alternative - find a color different from accent with good contrast
+    let accentAltColor = null;
+    let accentAltContrast = 0;
+
+    for (let i = 1; i < colors.length; i++) {
+        // Skip if it's the same as accent or background
+        if (colors[i] === accentColor || colors[i] === background) continue;
+
+        const contrast = getContrastRatio(background, colors[i]);
+        // We want good contrast (at least 3:1) and prefer colors different from accent
+        if (contrast >= 3 && contrast > accentAltContrast) {
+            accentAltColor = colors[i];
+            accentAltContrast = contrast;
+        }
+    }
+
+    // Fallback: if no accentAlt found, use text color or a distinct color
+    if (!accentAltColor) {
+        accentAltColor = colors.find(c => c !== accentColor && c !== background) || bestTextColor;
+    }
+
     return {
         background,           // Main background
         backgroundAlt,        // Borders, grids (subtle)
         text: bestTextColor,  // High contrast text (titles, labels)
         textSubtle: subtleTextColor,  // Medium contrast text
         accent: accentColor,  // Chart lines, data visualization
-        accentAlt: colors[Math.min(4, colors.length - 1)], // Alternative accent
+        accentAlt: accentAltColor, // Alternative accent
 
         // Metadata for debugging
         _luminance: backgroundLuminance,
@@ -136,6 +157,7 @@ function classifyColors(colors) {
             text: bestTextContrast,
             textSubtle: subtleTextContrast,
             accent: accentContrast,
+            accentAlt: accentAltContrast,
             backgroundAlt: backgroundAltContrast
         }
     };
