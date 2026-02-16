@@ -1,0 +1,17 @@
+{
+  "name": "advancedpf-web",
+  "version": "1.0.0",
+  "description": "Finance Dashboard Web Application",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "vitest": "^1.2.0"
+  }
+}

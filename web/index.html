@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdvancedPF - Personal Finance Dashboard</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Color Schemes -->
+    <script src="js/colorSchemes.js"></script>
+</head>
+<body>
+    <!-- Alpine.js App -->
+    <div x-data="dashboard()"
+         x-init="init()"
+         :style="`background-color: ${backgroundColor}; color: ${textColor}; min-height: 100vh;`"
+         class="transition-colors duration-300">
+
+        <!-- Top Right Icons -->
+        <div class="fixed top-6 right-6 flex items-center gap-3 z-40">
+            <!-- GitHub Link -->
+            <a href="https://github.com/erikmlutz/advancedpf"
+               target="_blank"
+               rel="noopener noreferrer"
+               :style="`color: ${textColor};`"
+               class="p-3 hover:opacity-70 transition-opacity duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-7 h-7">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                </svg>
+            </a>
+
+            <!-- Settings Button (Pines Pattern) -->
+            <button @click="settingsOpen = true"
+                    :style="`color: ${textColor};`"
+                    class="p-3 hover:opacity-70 transition-opacity duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-7 h-7">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Settings Modal (Pines Component - Adapted for Flat Design) -->
+        <template x-teleport="body">
+            <div x-show="settingsOpen"
+                 @keydown.escape.window="settingsOpen = false"
+                 class="fixed top-0 left-0 z-50 flex items-center justify-center w-screen h-screen"
+                 x-cloak>
+
+                <!-- Overlay -->
+                <div x-show="settingsOpen"
+                    x-transition:enter="ease-out duration-300"
+                    x-transition:enter-start="opacity-0"
+                    x-transition:enter-end="opacity-100"
+                    x-transition:leave="ease-in duration-300"
+                    x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0"
+                    @click="settingsOpen = false"
+                    class="absolute inset-0 w-full h-full bg-black/40"></div>
+
+                <!-- Modal Content -->
+                <div x-show="settingsOpen"
+                    x-trap.inert.noscroll="settingsOpen"
+                    x-transition:enter="ease-out duration-300"
+                    x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave="ease-in duration-200"
+                    x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    :style="`background-color: ${backgroundColor}; color: ${textColor};`"
+                    class="relative px-8 py-6 w-full sm:max-w-lg transition-colors duration-300">
+
+                    <!-- Close Button -->
+                    <button @click="settingsOpen = false"
+                            :style="`color: ${textColor};`"
+                            class="absolute top-0 right-0 flex justify-center items-center mt-5 mr-5 w-8 h-8 hover:opacity-70 transition-opacity duration-200">
+                        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+
+                    <!-- Modal Header -->
+                    <h3 class="text-2xl font-light mb-6">Settings</h3>
+
+                    <!-- Settings Content -->
+                    <div class="space-y-6">
+
+                        <!-- Theme Selector (Pines Dropdown - Adapted) -->
+                        <div>
+                            <label class="text-lg font-light mb-3 block">Theme</label>
+
+                            <div x-data="{ themeDropdownOpen: false }" class="relative">
+                                <!-- Dropdown Button -->
+                                <button @click="themeDropdownOpen = !themeDropdownOpen"
+                                        :style="`border-color: ${colorScheme.colors[1]};`"
+                                        class="w-full flex items-center justify-between px-4 py-3 border transition-opacity hover:opacity-70">
+                                    <!-- Theme name (left) -->
+                                    <span class="font-light" x-text="colorScheme.name"></span>
+
+                                    <div class="flex items-center gap-3">
+                                        <!-- Current theme colors preview (right) -->
+                                        <div class="flex gap-1">
+                                            <template x-for="(color, index) in getAllColorSchemes()[currentScheme].colors.slice(0, 5)" :key="index">
+                                                <div :style="`background-color: ${color};`"
+                                                     class="w-4 h-4"></div>
+                                            </template>
+                                        </div>
+                                        <!-- Chevron -->
+                                        <svg class="w-5 h-5 transition-transform duration-200"
+                                             :class="themeDropdownOpen ? 'rotate-180' : ''"
+                                             xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                        </svg>
+                                    </div>
+                                </button>
+
+                                <!-- Dropdown Menu -->
+                                <div x-show="themeDropdownOpen"
+                                     @click.away="themeDropdownOpen = false"
+                                     x-transition:enter="ease-out duration-200"
+                                     x-transition:enter-start="-translate-y-2 opacity-0"
+                                     x-transition:enter-end="translate-y-0 opacity-100"
+                                     x-transition:leave="ease-in duration-150"
+                                     x-transition:leave-start="translate-y-0 opacity-100"
+                                     x-transition:leave-end="-translate-y-2 opacity-0"
+                                     :style="`background-color: ${backgroundColor}; border-color: ${colorScheme.colors[1]};`"
+                                     class="absolute z-10 w-full mt-1 border overflow-hidden"
+                                     x-cloak>
+
+                                    <!-- Theme Options -->
+                                    <template x-for="(scheme, schemeKey) in getAllColorSchemes()" :key="schemeKey">
+                                        <button @click="switchScheme(schemeKey); themeDropdownOpen = false"
+                                                :class="currentScheme === schemeKey ? 'opacity-100' : 'opacity-70'"
+                                                class="w-full flex items-center justify-between px-4 py-3 hover:opacity-100 transition-opacity border-b"
+                                                :style="`border-color: ${colorScheme.colors[1]};`">
+                                            <!-- Theme name (left) -->
+                                            <span class="font-light" x-text="scheme.name"></span>
+
+                                            <!-- Color swatches (right) -->
+                                            <div class="flex gap-1">
+                                                <template x-for="(color, colorIndex) in scheme.colors.slice(0, 5)" :key="colorIndex">
+                                                    <div :style="`background-color: ${color};`"
+                                                         class="w-4 h-4"></div>
+                                                </template>
+                                            </div>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Placeholder for future settings -->
+                        <div class="opacity-50 text-sm font-light pt-4 border-t"
+                             :style="`border-color: ${colorScheme.colors[1]};`">
+                            Additional settings coming soon...
+                        </div>
+
+                        <!-- Placeholder for PDF Export -->
+                        <!-- <button class="w-full py-3 text-center font-light">
+                            Export PDF
+                        </button> -->
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Main Content -->
+        <div class="flex flex-col items-center justify-center min-h-screen">
+            <h1 class="text-6xl font-light tracking-wide mb-4"
+                :style="`color: ${textColor};`">
+                AdvancedPF
+            </h1>
+            <p class="text-xl font-light tracking-wider opacity-70"
+               :style="`color: ${textColor};`">
+                personal finance: simple, local.
+            </p>
+        </div>
+    </div>
+
+    <!-- Alpine.js x-cloak style -->
+    <style>
+        [x-cloak] {
+            display: none !important;
+        }
+    </style>
+
+    <script>
+        function dashboard() {
+            return {
+                currentScheme: 'pacificMist_dark',
+                backgroundColor: '#46494c',
+                textColor: '#ffffff',
+                colorScheme: null,
+                settingsOpen: false,
+
+                init() {
+                    this.loadColorScheme();
+                },
+
+                loadColorScheme() {
+                    this.colorScheme = getColorScheme(this.currentScheme);
+                    this.backgroundColor = this.colorScheme.colors[0];
+                    this.textColor = getContrastTextColor(this.backgroundColor);
+                },
+
+                switchScheme(schemeName) {
+                    this.currentScheme = schemeName;
+                    this.loadColorScheme();
+                },
+
+                getAllColorSchemes() {
+                    return getAllColorSchemes();
+                }
+            }
+        }
+    </script>
+</body>
+</html>
