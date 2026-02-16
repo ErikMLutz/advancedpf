@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Dashboard</title>
+    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- CDN Dependencies -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <!-- date-fns not needed - we'll use native Date methods instead -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <div x-data="dashboard" x-init="init()">
+        <!-- Header Controls -->
+        <header class="controls">
+            <h1>Finance Dashboard</h1>
+
+            <div class="control-group">
+                <!-- Colorscheme Selector -->
+                <label for="colorscheme">Color Scheme:</label>
+                <select id="colorscheme" x-model="selectedColorscheme" @change="updateColorscheme()">
+                    <option value="tableau10">Tableau 10 (Default)</option>
+                    <option value="paired">Brewer Paired</option>
+                    <option value="dark">Brewer Dark (PDF)</option>
+                    <option value="pastel">Pastel</option>
+                    <option value="colorblind">Colorblind Safe</option>
+                </select>
+
+                <!-- Export PDF Button -->
+                <button @click="exportPDF()" :disabled="loading" class="export-btn">
+                    📄 Export PDF
+                </button>
+            </div>
+        </header>
+
+        <!-- Loading State -->
+        <div x-show="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Loading financial data...</p>
+        </div>
+
+        <!-- Error State -->
+        <div x-show="error" class="error">
+            <h2>Error Loading Data</h2>
+            <p x-text="error"></p>
+        </div>
+
+        <!-- Dashboard Content -->
+        <main x-show="!loading && !error" class="dashboard" id="dashboard">
+            <!-- Stats Panel -->
+            <section class="chart-container stats-panel">
+                <div id="stats"></div>
+            </section>
+
+            <!-- Monthly Movers Chart -->
+            <section class="chart-container">
+                <canvas id="monthlyMovers"></canvas>
+            </section>
+
+            <!-- 12-Month Net Worth Chart -->
+            <section class="chart-container">
+                <canvas id="netWorth12Month"></canvas>
+            </section>
+
+            <!-- Credit Card Spending Chart -->
+            <section class="chart-container">
+                <canvas id="creditSpending"></canvas>
+            </section>
+
+            <!-- Asset Categorization Chart -->
+            <section class="chart-container">
+                <canvas id="assetCategorization"></canvas>
+            </section>
+
+            <!-- All-Time Net Worth Chart -->
+            <section class="chart-container">
+                <canvas id="allTimeNetWorth"></canvas>
+            </section>
+        </main>
+    </div>
+
+    <!-- Application Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/colors.js"></script>
+    <script src="js/dataLoader.js"></script>
+    <script src="js/dataProcessing.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

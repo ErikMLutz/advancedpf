@@ -25,9 +25,8 @@
     <script src="js/dataLoader.js"></script>
     <script src="js/dataProcessing.js"></script>
 
-    <!-- Color Schemes -->
-    <script src="js/colorSchemes.js"></script>
-    <script src="js/colorClassifier.js"></script>
+    <!-- Themes -->
+    <script src="js/themes.js"></script>
 
     <!-- Charts (each chart in separate file for token efficiency) -->
     <script src="js/chart-netWorthAllTime.js"></script>
@@ -116,15 +115,15 @@
                             <div x-data="{ themeDropdownOpen: false }" class="relative">
                                 <!-- Dropdown Button -->
                                 <button @click="themeDropdownOpen = !themeDropdownOpen"
-                                        :style="`border-color: ${colorScheme.classified.backgroundAlt};`"
+                                        :style="`border-color: ${theme.classified.backgroundAlt};`"
                                         class="w-full flex items-center justify-between px-4 py-3 border transition-opacity hover:opacity-70">
                                     <!-- Theme name (left) -->
-                                    <span class="font-light" x-text="colorScheme.name"></span>
+                                    <span class="font-light" x-text="theme.name"></span>
 
                                     <div class="flex items-center gap-3">
                                         <!-- Current theme colors preview (right) -->
                                         <div class="flex gap-1">
-                                            <template x-for="(color, index) in getAllColorSchemes()[currentScheme].colors" :key="index">
+                                            <template x-for="(color, index) in getAllThemes()[currentScheme].colors" :key="index">
                                                 <div :style="`background-color: ${color};`"
                                                      class="w-3 h-3"></div>
                                             </template>
@@ -147,16 +146,16 @@
                                      x-transition:leave="ease-in duration-150"
                                      x-transition:leave-start="translate-y-0 opacity-100"
                                      x-transition:leave-end="-translate-y-2 opacity-0"
-                                     :style="`background-color: ${backgroundColor}; border-color: ${colorScheme.classified.backgroundAlt};`"
+                                     :style="`background-color: ${backgroundColor}; border-color: ${theme.classified.backgroundAlt};`"
                                      class="absolute z-10 w-full mt-1 border overflow-hidden"
                                      x-cloak>
 
                                     <!-- Theme Options -->
-                                    <template x-for="(scheme, schemeKey) in getAllColorSchemes()" :key="schemeKey">
+                                    <template x-for="(scheme, schemeKey) in getAllThemes()" :key="schemeKey">
                                         <button @click="switchScheme(schemeKey); themeDropdownOpen = false"
                                                 :class="currentScheme === schemeKey ? 'opacity-100' : 'opacity-70'"
                                                 class="w-full flex items-center justify-between px-4 py-3 hover:opacity-100 transition-opacity border-b"
-                                                :style="`border-color: ${colorScheme.classified.backgroundAlt};`">
+                                                :style="`border-color: ${theme.classified.backgroundAlt};`">
                                             <!-- Theme name (left) -->
                                             <span class="font-light" x-text="scheme.name"></span>
 
@@ -173,16 +172,47 @@
                             </div>
                         </div>
 
-                        <!-- Placeholder for future settings -->
-                        <div class="opacity-50 text-sm font-light pt-4 border-t"
-                             :style="`border-color: ${colorScheme.classified.backgroundAlt};`">
-                            Additional settings coming soon...
-                        </div>
+                        <!-- Theme Preview -->
+                        <div class="pt-4 border-t"
+                             :style="`border-color: ${theme.classified.backgroundAlt};`">
+                            <h4 class="text-sm font-light mb-3 opacity-70">Theme Preview</h4>
 
-                        <!-- Placeholder for PDF Export -->
-                        <!-- <button class="w-full py-3 text-center font-light">
-                            Export PDF
-                        </button> -->
+                            <!-- Color Palette Table -->
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-xs">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-left font-light py-2 pr-4 opacity-70">Color</th>
+                                            <th class="font-light py-2 px-1 opacity-70">100</th>
+                                            <th class="font-light py-2 px-1 opacity-70">200</th>
+                                            <th class="font-light py-2 px-1 opacity-70">300</th>
+                                            <th class="font-light py-2 px-1 opacity-70">400</th>
+                                            <th class="font-light py-2 px-1 opacity-70">500</th>
+                                            <th class="font-light py-2 px-1 opacity-70">600</th>
+                                            <th class="font-light py-2 px-1 opacity-70">700</th>
+                                            <th class="font-light py-2 px-1 opacity-70">800</th>
+                                            <th class="font-light py-2 px-1 opacity-70">900</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="(colorFamily, familyName) in getThemePalette()" :key="familyName">
+                                            <tr :style="`border-color: ${theme.classified.backgroundAlt};`" class="border-t">
+                                                <td class="text-left font-light py-2 pr-4 opacity-70" x-text="formatColorName(familyName)"></td>
+                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['100']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
+                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['200']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
+                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['300']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
+                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['400']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
+                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['500']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
+                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['600']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
+                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['700']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
+                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['800']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
+                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['900']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -207,7 +237,7 @@
                 <!-- Net Worth Chart Container -->
                 <div class="w-full mb-8">
                     <h2 class="text-2xl font-light mb-4"
-                        :style="`color: ${colorScheme ? colorScheme.classified.text : textColor};`">
+                        :style="`color: ${theme ? theme.classified.text : textColor};`">
                         Net Worth
                     </h2>
 
@@ -215,10 +245,10 @@
                     <div x-show="hasError"
                          x-cloak
                          class="p-6 border"
-                         :style="`display: ${hasError ? 'block' : 'none'}; border-color: ${colorScheme ? colorScheme.classified.backgroundAlt : '#ccc'}; color: ${textColor};`">
+                         :style="`display: ${hasError ? 'block' : 'none'}; border-color: ${theme ? theme.classified.backgroundAlt : '#ccc'}; color: ${textColor};`">
                         <p class="font-light mb-2">⚠️ Failed to load data</p>
                         <p class="text-sm opacity-70" x-text="dataLoadError"></p>
-                        <p class="text-sm opacity-70 mt-4">Run: <code class="px-2 py-1" :style="`background-color: ${colorScheme ? colorScheme.classified.backgroundAlt : '#f0f0f0'};`">just serve --generate-sample-data</code></p>
+                        <p class="text-sm opacity-70 mt-4">Run: <code class="px-2 py-1" :style="`background-color: ${theme ? theme.classified.backgroundAlt : '#f0f0f0'};`">just serve --generate-sample-data</code></p>
                     </div>
 
                     <!-- Chart -->
@@ -232,7 +262,7 @@
                     <!-- Left: 12 Month Net Worth -->
                     <div>
                         <h2 class="text-2xl font-light mb-4"
-                            :style="`color: ${colorScheme ? colorScheme.classified.text : textColor};`">
+                            :style="`color: ${theme ? theme.classified.text : textColor};`">
                             Net Worth (Last 12 Months)
                         </h2>
                         <div style="position: relative; height: 400px; width: 100%;">
@@ -243,7 +273,7 @@
                     <!-- Right: Placeholder for next chart -->
                     <div>
                         <h2 class="text-2xl font-light mb-4"
-                            :style="`color: ${colorScheme ? colorScheme.classified.text : textColor};`">
+                            :style="`color: ${theme ? theme.classified.text : textColor};`">
                             Chart 2
                         </h2>
                         <div style="position: relative; height: 400px; width: 100%;">
@@ -270,7 +300,7 @@
                 currentScheme: 'pacificMist_dark',
                 backgroundColor: '#46494c',
                 textColor: '#ffffff',
-                colorScheme: null,
+                theme: null,
                 settingsOpen: false,
                 netWorthData: null,
                 netWorth12MonthsData: null,
@@ -281,15 +311,15 @@
                 },
 
                 async init() {
-                    this.loadColorScheme();
+                    this.loadTheme();
                     await this.loadData();
                     this.renderCharts();
                 },
 
-                loadColorScheme() {
-                    this.colorScheme = getClassifiedColorScheme(this.currentScheme);
-                    this.backgroundColor = this.colorScheme.classified.background;
-                    this.textColor = this.colorScheme.classified.text;
+                loadTheme() {
+                    this.theme = getTheme(this.currentScheme);
+                    this.backgroundColor = this.theme.classified.background;
+                    this.textColor = this.theme.classified.text;
                 },
 
                 async loadData() {
@@ -371,7 +401,7 @@
                             createAllTimeNetWorthChart(
                                 'netWorthChart',
                                 this.netWorthData,
-                                this.colorScheme.classified
+                                this.theme.classified
                             );
                         }
 
@@ -379,7 +409,7 @@
                             create12MonthNetWorthChart(
                                 'netWorth12MonthsChart',
                                 this.netWorth12MonthsData,
-                                this.colorScheme.classified
+                                this.theme.classified
                             );
                         }
                     } catch (error) {
@@ -389,12 +419,21 @@
 
                 switchScheme(schemeName) {
                     this.currentScheme = schemeName;
-                    this.loadColorScheme();
+                    this.loadTheme();
                     this.renderCharts(); // Re-render charts with new colors
                 },
 
-                getAllColorSchemes() {
-                    return getAllColorSchemes();
+                getAllThemes() {
+                    return getAllThemes();
+                },
+
+                getThemePalette() {
+                    const themeObj = THEMES[this.currentScheme];
+                    return themeObj ? themeObj.palette : {};
+                },
+
+                formatColorName(name) {
+                    return name.replace(/_/g, ' ');
                 }
             }
         }
