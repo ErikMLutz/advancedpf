@@ -135,9 +135,8 @@
                                      x-transition:leave="ease-in duration-150"
                                      x-transition:leave-start="translate-y-0 opacity-100"
                                      x-transition:leave-end="-translate-y-2 opacity-0"
-                                     :style="`background-color: ${backgroundColor}; border-color: ${theme.classified.backgroundAlt};`"
-                                     class="absolute z-10 w-full mt-1 border overflow-hidden"
-                                     x-cloak>
+                                     :style="{ 'background-color': backgroundColor, 'border-color': theme.classified.backgroundAlt }"
+                                     class="absolute z-10 w-full mt-1 border overflow-hidden">
 
                                     <!-- Theme Options -->
                                     <template x-for="(scheme, schemeKey) in getAllThemes()" :key="schemeKey">
@@ -174,6 +173,14 @@
                             <div class="flex items-center justify-between mb-4">
                                 <h4 class="text-sm font-light opacity-70">Theme Mapping</h4>
 
+                                <div class="flex gap-2">
+                                <!-- Apply Changes Button -->
+                                <button @click="applyThemeChanges()"
+                                        :style="`border-color: ${theme.classified.backgroundAlt};`"
+                                        class="px-4 py-2 text-sm font-light border hover:opacity-70 transition-opacity">
+                                    <span x-text="themeApplied ? 'Applied!' : 'Apply'"></span>
+                                </button>
+
                                 <!-- Copy to Clipboard Button -->
                                 <button @click="copyMappingToClipboard()"
                                         :style="`border-color: ${theme.classified.backgroundAlt};`"
@@ -186,6 +193,7 @@
                                     </svg>
                                     <span x-text="themeCopied ? 'Copied!' : 'Copy Theme'"></span>
                                 </button>
+                                </div>
                             </div>
 
                             <!-- Mapping Table -->
@@ -269,10 +277,7 @@
                                          initPreviewChart() {
                                              setTimeout(() => {
                                                  const ctx = document.getElementById('themePreviewChart');
-                                                 if (!ctx) {
-                                                     console.error('Preview chart canvas not found');
-                                                     return;
-                                                 }
+                                                 if (!ctx) return;
 
                                                  new Chart(ctx, {
                                                      type: 'bar',
@@ -337,8 +342,8 @@
                                      x-init="initPreviewChart()">
                                     <h4 class="text-sm font-light opacity-70 mb-4">Live Preview</h4>
 
-                                    <div class="space-y-4"
-                                         :style="`background-color: ${backgroundColor};`">
+                                    <div class="space-y-4 p-4 rounded"
+                                         :style="`background-color: ${theme.classified.background}; border: 1px solid ${theme.classified.backgroundAlt};`">
 
                                         <!-- Title & Subtitle -->
                                         <div>
@@ -519,6 +524,7 @@
                 dataLoadError: null,
                 themeMapping: {},
                 themeCopied: false,
+                themeApplied: false,
 
                 get hasError() {
                     return this.dataLoadError !== null && this.dataLoadError !== undefined && this.dataLoadError !== '';
@@ -639,6 +645,33 @@
                     this.currentScheme = schemeName;
                     this.loadTheme();
                     this.renderCharts(); // Re-render charts with new colors
+                },
+
+                applyThemeChanges() {
+                    // Get current theme and update its classified colors with modified mapping
+                    const themeObj = THEMES[this.currentScheme];
+                    if (!themeObj) return;
+
+                    // Rebuild classified colors from the modified themeMapping
+                    const classified = {};
+                    for (const [purpose, path] of Object.entries(this.themeMapping)) {
+                        const [colorFamily, shade] = path.split('.');
+                        classified[purpose] = themeObj.palette[colorFamily]?.[shade] || '#ff00ff';
+                    }
+
+                    // Update theme with new classified colors
+                    this.theme.classified = classified;
+                    this.backgroundColor = classified.background;
+                    this.textColor = classified.text;
+
+                    // Re-render all charts with new colors
+                    this.renderCharts();
+
+                    // Show "Applied!" feedback
+                    this.themeApplied = true;
+                    setTimeout(() => {
+                        this.themeApplied = false;
+                    }, 2000);
                 },
 
                 getAllThemes() {
