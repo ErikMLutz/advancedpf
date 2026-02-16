@@ -443,12 +443,12 @@
                                         <!-- Interactive Buttons -->
                                         <div class="flex gap-2">
                                             <button @click="sampleView = 'month'; updateChartData()"
-                                                    :style="`border-color: ${previewColors.backgroundAlt}; ${sampleView === 'month' ? 'opacity: 1;' : 'opacity: 0.5;'}`"
+                                                    :style="`color: ${previewColors.text}; border-color: ${previewColors.backgroundAlt}; ${sampleView === 'month' ? 'opacity: 1;' : 'opacity: 0.5;'}`"
                                                     class="px-3 py-1.5 text-sm border hover:opacity-100 transition-opacity">
                                                 Month View
                                             </button>
                                             <button @click="sampleView = 'year'; updateChartData()"
-                                                    :style="`border-color: ${previewColors.backgroundAlt}; ${sampleView === 'year' ? 'opacity: 1;' : 'opacity: 0.5;'}`"
+                                                    :style="`color: ${previewColors.text}; border-color: ${previewColors.backgroundAlt}; ${sampleView === 'year' ? 'opacity: 1;' : 'opacity: 0.5;'}`"
                                                     class="px-3 py-1.5 text-sm border hover:opacity-100 transition-opacity">
                                                 Year View
                                             </button>
@@ -842,8 +842,8 @@
                         window._updatePreviewColors();
                     }
 
-                    // Update without animation for instant feedback
-                    chart.update('none');
+                    // Update chart (use default mode to ensure all properties update)
+                    chart.update();
                 },
 
                 async copyMappingToClipboard() {
