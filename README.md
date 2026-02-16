@@ -5,13 +5,19 @@ Personal finance dashboard that visualizes financial data from CSV files.
 ## Quick Start
 
 ```bash
+# Generate sample data and start server
+just serve --sample-data
+
+# Visit http://localhost:8000/web/
+```
+
+**Or step by step:**
+```bash
 # Generate sample data
 just generate-fake-data
 
 # Start the web app
 just serve
-
-# Visit http://localhost:8000
 ```
 
 ## Usage
@@ -50,9 +56,20 @@ python main.py
 ### Sample Data
 
 ```bash
-# Generate realistic fake data for testing
+# Generate sample data and serve
+just serve --sample-data
+
+# Generate sample data only
 just generate-fake-data
+
+# Run tests with sample data
+just test --sample-data
 ```
+
+**Interactive confirmation:**
+- Prompts for confirmation if data/ already exists
+- Prevents accidental deletion of real financial data
+- Type `y` to confirm deletion, `n` to cancel
 
 ### Real Data (1Password Integration)
 

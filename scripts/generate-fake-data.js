@@ -2,8 +2,28 @@
 
 // Generate realistic fake financial data for testing
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import readline from 'readline';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Prompt for user confirmation
+function confirm(question) {
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+
+    return new Promise((resolve) => {
+        rl.question(question, (answer) => {
+            rl.close();
+            resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
+        });
+    });
+}
 
 // Helper to format date as YYYY-MM-DD
 function formatDate(date) {
@@ -194,9 +214,41 @@ function arrayToCSV(data) {
     return [headers.join(','), ...rows].join('\n');
 }
 
+// Check if data directory exists and has files
+function hasExistingData(dataDir) {
+    if (!fs.existsSync(dataDir)) {
+        return false;
+    }
+    const files = fs.readdirSync(dataDir);
+    return files.some(f => f.endsWith('.csv'));
+}
+
 // Main
-function main() {
+async function main() {
     const dataDir = path.join(__dirname, '..', 'data');
+
+    // Check for existing data and confirm deletion
+    if (hasExistingData(dataDir)) {
+        console.log('⚠️  Warning: data/ folder already exists with CSV files.');
+        console.log('This will DELETE your existing financial data!');
+        console.log('');
+
+        const proceed = await confirm('Continue? (y/N) ');
+
+        if (!proceed) {
+            console.log('Cancelled.');
+            process.exit(0);
+        }
+
+        // Delete existing data
+        console.log('Deleting existing data...');
+        fs.rmSync(dataDir, { recursive: true, force: true });
+    }
+
+    // Create data directory if it doesn't exist
+    if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+    }
 
     console.log('Generating fake financial data...');
 

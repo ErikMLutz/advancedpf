@@ -1,7 +1,0 @@
-account,type,retirement,debt_applies_to,primary_residence
-/bank/checking,cash,false,,
-/visa/credit_card,debt,false,,
-/house/mortgage,debt,false,/property/house,
-/property/house,property,false,,true
-/fidelity/401k,securities,true,,
-/fidelity/brokerage,securities,false,,
