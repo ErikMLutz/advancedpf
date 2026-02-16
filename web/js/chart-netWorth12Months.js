@@ -27,14 +27,14 @@ function create12MonthNetWorthChart(canvasId, data, classified) {
                 {
                     label: 'this year',
                     data: thisYearValues,
-                    backgroundColor: classified.accent,
+                    backgroundColor: classified.chart1,
                     barPercentage: 0.9,
                     categoryPercentage: 0.9
                 },
                 {
                     label: 'last year',
                     data: lastYearValues,
-                    backgroundColor: classified.accentAlt,
+                    backgroundColor: classified.chart2,
                     barPercentage: 0.5,
                     categoryPercentage: 0.9
                 }
@@ -70,7 +70,7 @@ function create12MonthNetWorthChart(canvasId, data, classified) {
                     backgroundColor: classified.background,
                     titleColor: classified.text,
                     bodyColor: classified.text,
-                    borderColor: classified.accent,
+                    borderColor: classified.chart1,
                     borderWidth: 1,
                     padding: 12,
                     displayColors: true,

@@ -536,10 +536,16 @@
             <div class="w-full max-w-6xl">
                 <!-- Net Worth Chart Container -->
                 <div class="w-full mb-8">
-                    <h2 class="text-2xl font-light mb-4"
-                        :style="`color: ${theme ? theme.classified.text : textColor};`">
-                        Net Worth
-                    </h2>
+                    <div class="mb-4">
+                        <h2 class="text-4xl font-light mb-1"
+                            :style="`color: ${theme ? theme.classified.text : textColor};`">
+                            Net Worth
+                        </h2>
+                        <p class="text-sm font-light opacity-70"
+                           :style="`color: ${theme ? theme.classified.text : textColor};`">
+                            all time
+                        </p>
+                    </div>
 
                     <!-- Error Message -->
                     <div x-show="hasError"
@@ -563,7 +569,7 @@
                     <div>
                         <h2 class="text-2xl font-light mb-4"
                             :style="`color: ${theme ? theme.classified.text : textColor};`">
-                            Net Worth (Last 12 Months)
+                            last twelve months
                         </h2>
                         <div style="position: relative; height: 400px; width: 100%;">
                             <canvas id="netWorth12MonthsChart"></canvas>
@@ -572,10 +578,6 @@
 
                     <!-- Right: Placeholder for next chart -->
                     <div>
-                        <h2 class="text-2xl font-light mb-4"
-                            :style="`color: ${theme ? theme.classified.text : textColor};`">
-                            Chart 2
-                        </h2>
                         <div style="position: relative; height: 400px; width: 100%;">
                             <!-- Next chart goes here -->
                         </div>
