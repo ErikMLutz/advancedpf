@@ -98,35 +98,51 @@
                     <div class="max-w-6xl mx-auto">
                         <h2 class="text-4xl font-light mb-8">Settings</h2>
 
-                        <!-- Settings Content -->
-                        <div class="space-y-8">
-
-                        <!-- General Settings -->
-                        <div>
-                            <label class="text-lg font-light mb-3 block">General</label>
-
-                            <div class="space-y-4">
-                                <!-- Verbose Mode Toggle -->
-                                <div class="flex items-center justify-between">
-                                    <div>
-                                        <div class="font-light">Verbose Mode</div>
-                                        <div class="text-sm opacity-70">Show detailed tooltips with source breakdowns</div>
-                                    </div>
-                                    <button @click="verbose = !verbose; renderCharts()"
-                                            :style="`background-color: ${verbose ? theme.classified.accent : theme.classified.backgroundAlt};`"
-                                            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors">
-                                        <span :class="verbose ? 'translate-x-6' : 'translate-x-1'"
-                                              :style="`background-color: ${theme.classified.background};`"
-                                              class="inline-block h-4 w-4 transform rounded-full transition-transform">
-                                        </span>
-                                    </button>
-                                </div>
+                        <!-- Settings Tabs -->
+                        <div x-data="{ activeTab: 'general' }">
+                            <!-- Tab Navigation -->
+                            <div class="flex gap-4 border-b mb-8"
+                                 :style="`border-color: ${theme.classified.backgroundAlt};`">
+                                <button @click="activeTab = 'general'"
+                                        :style="activeTab === 'general' ? `color: ${theme.classified.text}; border-color: ${theme.classified.accent};` : `color: ${theme.classified.textSubtle};`"
+                                        :class="activeTab === 'general' ? 'border-b-2' : ''"
+                                        class="pb-3 px-2 text-lg font-light transition-colors">
+                                    General
+                                </button>
+                                <button @click="activeTab = 'theme'"
+                                        :style="activeTab === 'theme' ? `color: ${theme.classified.text}; border-color: ${theme.classified.accent};` : `color: ${theme.classified.textSubtle};`"
+                                        :class="activeTab === 'theme' ? 'border-b-2' : ''"
+                                        class="pb-3 px-2 text-lg font-light transition-colors">
+                                    Theme
+                                </button>
                             </div>
-                        </div>
 
+                            <!-- Tab Content -->
+                            <div class="space-y-8">
+                                <!-- General Tab -->
+                                <div x-show="activeTab === 'general'">
+                                    <div class="space-y-4">
+                                        <!-- Verbose Mode Toggle -->
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <div class="font-light">Verbose Mode</div>
+                                                <div class="text-sm opacity-70">Show detailed tooltips with source breakdowns</div>
+                                            </div>
+                                            <button @click="verbose = !verbose; renderCharts()"
+                                                    :style="`background-color: ${verbose ? theme.classified.accent : theme.classified.backgroundAlt};`"
+                                                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors">
+                                                <span :class="verbose ? 'translate-x-6' : 'translate-x-1'"
+                                                      :style="`background-color: ${theme.classified.background};`"
+                                                      class="inline-block h-4 w-4 transform rounded-full transition-transform">
+                                                </span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Theme Tab -->
+                                <div x-show="activeTab === 'theme'">
                         <!-- Theme Selector (Pines Dropdown - Adapted) -->
-                        <div>
-                            <label class="text-lg font-light mb-3 block">Theme</label>
 
                             <div x-data="{ themeDropdownOpen: false }" class="relative">
                                 <!-- Dropdown Button -->
@@ -538,9 +554,10 @@
                             </div>
                         </div>
 
-                        </div>
-                        </div><!-- End theme details wrapper -->
-                    </div>
+                                </div><!-- End theme tab -->
+                            </div><!-- End tab content -->
+                        </div><!-- End tabs container -->
+                    </div><!-- End max-w-6xl mx-auto -->
                 </div>
             </div>
         </template>
