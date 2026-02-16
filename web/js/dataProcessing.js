@@ -334,3 +334,98 @@ function computeValueOverLast12Months(sources) {
     // Return only last 12 months
     return result.slice(-12);
 }
+
+/**
+ * Compute asset allocation by category (replicates Python asset categorization logic)
+ * @param {Array} sources - Array of SnapshotData sources (cash, property, debt, securities)
+ * @param {Object} manifest - Manifest data with account metadata
+ * @returns {Array} Array of {category, value, proportion} sorted by value descending
+ */
+function computeAssetAllocation(sources, manifest) {
+    // Get current month values by account from all sources
+    const accountValues = [];
+
+    sources.forEach(source => {
+        const byAccount = source.valueByAccount();
+        byAccount.forEach(row => {
+            accountValues.push({
+                account: row.account,
+                value: row.value,
+                sourceType: source.type  // Keep track of source type
+            });
+        });
+    });
+
+    // Merge with manifest metadata and use manifest type
+    const assetsWithMetadata = accountValues.map(row => {
+        const meta = manifest.find(m => m.account === row.account);
+
+        if (!meta) {
+            console.warn(`Account "${row.account}" not found in manifest`);
+            return null;
+        }
+
+        return {
+            account: row.account,
+            value: row.value,
+            type: meta.type || row.sourceType,  // Use manifest type, fallback to source type
+            retirement: meta.retirement === true || meta.retirement === 'true' || meta.retirement === 'TRUE',
+            primary_residence: meta.primary_residence === true || meta.primary_residence === 'true' || meta.primary_residence === 'TRUE',
+            debt_applies_to: meta.debt_applies_to || ''
+        };
+    }).filter(row => row !== null);  // Remove accounts not in manifest
+
+    // Apply debt to applicable accounts (matching Python logic)
+    const assets = assetsWithMetadata.map(row => {
+        let applicableDebt = 0;
+
+        if (row.type !== 'debt') {
+            // Find debt that applies to this account
+            const debts = assetsWithMetadata.filter(d =>
+                d.type === 'debt' && d.debt_applies_to === row.account
+            );
+            applicableDebt = debts.reduce((sum, d) => sum + d.value, 0);
+        }
+
+        return {
+            ...row,
+            value: row.value + applicableDebt
+        };
+    });
+
+    // Filter out debt accounts (they've been applied)
+    const filteredAssets = assets.filter(a => a.type !== 'debt');
+
+    // Categorize each asset
+    const categorized = filteredAssets.map(row => {
+        let category = row.type;
+
+        if (row.primary_residence === true) {
+            category = 'primary residence';
+        } else if (row.retirement === true) {
+            category = `retirement ${row.type}`;
+        }
+
+        return {
+            category,
+            value: row.value
+        };
+    });
+
+    // Group by category and sum
+    const categoryGroups = groupBy(categorized, item => item.category);
+    const aggregated = Array.from(categoryGroups.entries()).map(([category, items]) => ({
+        category,
+        value: items.reduce((sum, item) => sum + item.value, 0)
+    }));
+
+    // Calculate proportions
+    const total = aggregated.reduce((sum, item) => sum + item.value, 0);
+    const withProportions = aggregated.map(item => ({
+        ...item,
+        proportion: total > 0 ? item.value / total : 0
+    }));
+
+    // Sort by value descending
+    return withProportions.sort((a, b) => b.value - a.value);
+}

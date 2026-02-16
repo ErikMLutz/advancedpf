@@ -17,6 +17,9 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
+    <!-- Chart.js Datalabels Plugin (for pie chart labels) -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+
     <!-- Papa Parse (CSV parsing) -->
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
@@ -31,6 +34,7 @@
     <!-- Charts (each chart in separate file for token efficiency) -->
     <script src="js/chart-netWorthAllTime.js"></script>
     <script src="js/chart-netWorth12Months.js"></script>
+    <script src="js/chart-assetAllocation.js"></script>
 </head>
 <body>
     <!-- Alpine.js App -->
@@ -576,10 +580,14 @@
                         </div>
                     </div>
 
-                    <!-- Right: Placeholder for next chart -->
+                    <!-- Right: Asset Allocation -->
                     <div>
+                        <h2 class="text-xl font-light mb-4"
+                            :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
+                            asset allocation
+                        </h2>
                         <div style="position: relative; height: 400px; width: 100%;">
-                            <!-- Next chart goes here -->
+                            <canvas id="assetAllocationChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -606,6 +614,7 @@
                 settingsOpen: false,
                 netWorthData: null,
                 netWorth12MonthsData: null,
+                assetAllocationData: null,
                 dataLoadError: null,
                 themeMapping: {},
                 themeCopied: false,
@@ -694,6 +703,9 @@
                         // Calculate 12-month net worth with year-over-year comparison
                         this.netWorth12MonthsData = computeValueOverLast12Months(sources);
 
+                        // Calculate asset allocation
+                        this.assetAllocationData = computeAssetAllocation(sources, rawData.manifest);
+
                         this.dataLoadError = null;
 
                     } catch (error) {
@@ -718,6 +730,14 @@
                             create12MonthNetWorthChart(
                                 'netWorth12MonthsChart',
                                 this.netWorth12MonthsData,
+                                this.theme.classified
+                            );
+                        }
+
+                        if (this.assetAllocationData && this.dataLoadError === null) {
+                            createAssetAllocationChart(
+                                'assetAllocationChart',
+                                this.assetAllocationData,
                                 this.theme.classified
                             );
                         }
