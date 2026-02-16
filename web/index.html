@@ -43,6 +43,31 @@
          :style="`background-color: ${backgroundColor}; color: ${textColor}; min-height: 100vh;`"
          class="transition-colors duration-300">
 
+        <!-- Loading Progress Bar -->
+        <div x-show="loading"
+             x-cloak
+             class="fixed inset-0 flex items-center justify-center z-50"
+             :style="`background-color: ${backgroundColor};`">
+            <div class="w-full max-w-md px-8">
+                <div class="mb-4 text-center">
+                    <h3 class="text-2xl font-light mb-2"
+                        :style="`color: ${textColor};`">
+                        Loading Financial Data
+                    </h3>
+                    <p class="text-sm font-light opacity-70"
+                       :style="`color: ${textColor};`"
+                       x-text="`${loadingProgress}%`">
+                    </p>
+                </div>
+                <div class="w-full h-2 rounded-full overflow-hidden"
+                     :style="`background-color: ${theme ? theme.classified.backgroundAlt : '#333'};`">
+                    <div class="h-full transition-all duration-300 ease-out rounded-full"
+                         :style="`width: ${loadingProgress}%; background-color: ${theme ? theme.classified.accent : '#4e79a7'};`">
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Top Right Icons -->
         <div class="fixed top-6 right-6 flex items-center gap-3 z-40">
             <!-- GitHub Link -->
@@ -201,10 +226,9 @@
                                     </template>
                                 </div>
                             </div>
-                        </div>
 
                         <!-- Theme Details (Preview + Mapping) -->
-                        <div>
+                        <div class="mt-8">
                             <!-- Theme Mapping Editor & Preview -->
                             <div class="pt-8 border-t"
                                  :style="`border-color: ${theme.classified.backgroundAlt};`">
@@ -580,7 +604,7 @@
             <div class="w-full max-w-6xl">
                 <!-- Net Worth Chart Container -->
                 <div class="w-full mb-8">
-                    <div class="mb-4">
+                    <div class="mb-4" x-show="!hasError">
                         <h2 class="text-4xl font-light mb-1"
                             :style="`color: ${theme ? theme.classified.text : textColor};`">
                             Net Worth
@@ -626,7 +650,7 @@
                             :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
                             asset allocation
                         </h2>
-                        <div style="position: relative; height: 400px; width: 100%;">
+                        <div style="position: relative; height: 350px; width: 100%; max-width: 450px; margin: 0 auto;">
                             <canvas id="assetAllocationChart"></canvas>
                         </div>
                     </div>
@@ -653,6 +677,8 @@
                 theme: null,
                 settingsOpen: false,
                 verbose: false,
+                loading: true,
+                loadingProgress: 0,
                 netWorthData: null,
                 netWorth12MonthsData: null,
                 assetAllocationData: null,
@@ -666,9 +692,71 @@
                 },
 
                 async init() {
+                    this.loading = true;
+                    this.loadingProgress = 0;
+
+                    // Random target between 60-85% where we'll hang while loading
+                    const hangTarget = 70 + Math.floor(Math.random() * 16); // 70-85%
+
+                    // Start smooth progress animation
+                    const startTime = Date.now();
+                    const initialAnimDuration = 1200; // Animate to hang target over 1.2s
+
+                    const progressInterval = setInterval(() => {
+                        const elapsed = Date.now() - startTime;
+                        const progress = Math.min(1, elapsed / initialAnimDuration);
+
+                        // Ease out curve for smooth deceleration
+                        const easeProgress = 1 - Math.pow(1 - progress, 2);
+                        const targetProgress = Math.floor(hangTarget * easeProgress);
+
+                        if (targetProgress > this.loadingProgress) {
+                            this.loadingProgress = targetProgress;
+                        }
+                    }, 16); // ~60fps
+
+                    // Ensure minimum 1.5s total load time
+                    const minLoadTime = 1500;
+                    const loadStartTime = Date.now();
+
                     this.loadTheme();
                     await this.loadData();
                     this.renderCharts();
+
+                    // Wait for minimum load time if needed
+                    const loadElapsed = Date.now() - loadStartTime;
+                    if (loadElapsed < minLoadTime) {
+                        await new Promise(resolve => setTimeout(resolve, minLoadTime - loadElapsed));
+                    }
+
+                    // Stop the initial animation
+                    clearInterval(progressInterval);
+
+                    // Animate smoothly from current progress to 100% over 500ms
+                    const finalAnimStart = Date.now();
+                    const finalAnimDuration = 500;
+                    const startProgress = this.loadingProgress;
+
+                    const finalInterval = setInterval(() => {
+                        const elapsed = Date.now() - finalAnimStart;
+                        const progress = Math.min(1, elapsed / finalAnimDuration);
+
+                        // Ease out animation
+                        const easeProgress = 1 - Math.pow(1 - progress, 3);
+                        this.loadingProgress = Math.floor(startProgress + (100 - startProgress) * easeProgress);
+
+                        if (this.loadingProgress >= 100) {
+                            clearInterval(finalInterval);
+                            this.loadingProgress = 100;
+                        }
+                    }, 16); // ~60fps
+
+                    // Wait for final animation to complete
+                    await new Promise(resolve => setTimeout(resolve, finalAnimDuration));
+
+                    // Hold at 100% for a moment before hiding
+                    await new Promise(resolve => setTimeout(resolve, 700));
+                    this.loading = false;
                 },
 
                 loadTheme() {
@@ -741,27 +829,34 @@
                         // Keep data from first to last non-zero value (inclusive)
                         const filteredData = monthValues.slice(firstNonZeroIndex, lastNonZeroIndex + 1);
 
-                        // Compute source breakdowns for verbose mode
-                        const sourceBreakdowns = {};
+                        // Compute categorized breakdowns for verbose mode
+                        // Get all account-level data with categorization
+                        const accountsWithMetadata = getAccountsWithMetadata(sources, rawData.manifest, false);
+
+                        // Group by month and category
+                        const categoryBreakdowns = {};
                         filteredData.forEach(monthData => {
                             const month = monthData.month;
-                            const breakdown = { cash: 0, property: 0, debt: 0, securities: 0 };
+                            const breakdown = {};
 
-                            sources.forEach(source => {
-                                const sourceData = source.valueByMonth(monthsDiff);
-                                const dataPoint = sourceData.find(d => d.month === month);
-                                if (dataPoint) {
-                                    breakdown[source.type] = dataPoint.value;
+                            // Get all accounts for this month
+                            const monthAccounts = accountsWithMetadata.filter(a => a.month === month);
+
+                            // Sum by category
+                            monthAccounts.forEach(account => {
+                                if (!breakdown[account.category]) {
+                                    breakdown[account.category] = 0;
                                 }
+                                breakdown[account.category] += account.value;
                             });
 
-                            sourceBreakdowns[month] = breakdown;
+                            categoryBreakdowns[month] = breakdown;
                         });
 
                         this.netWorthData = {
                             months: filteredData.map(d => d.month),
                             values: filteredData.map(d => d.value),
-                            sourceBreakdowns: sourceBreakdowns
+                            categoryBreakdowns: categoryBreakdowns
                         };
 
                         // Calculate 12-month net worth with year-over-year comparison
@@ -788,7 +883,7 @@
                                 this.netWorthData,
                                 this.theme.classified,
                                 this.verbose,
-                                this.netWorthData.sourceBreakdowns
+                                this.netWorthData.categoryBreakdowns
                             );
                         }
 

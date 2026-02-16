@@ -336,27 +336,45 @@ function computeValueOverLast12Months(sources) {
 }
 
 /**
- * Compute asset allocation by category (replicates Python asset categorization logic)
- * @param {Array} sources - Array of SnapshotData sources (cash, property, debt, securities)
- * @param {Object} manifest - Manifest data with account metadata
- * @returns {Array} Array of {category, value, proportion} sorted by value descending
+ * Categorize an account based on its metadata
+ * Shared categorization logic used across charts and tooltips
+ * @param {Object} account - Account object with type, retirement, primary_residence
+ * @returns {string} Category name
  */
-function computeAssetAllocation(sources, manifest) {
-    // Get current month values by account from all sources
+function categorizeAccount(account) {
+    if (account.primary_residence === true) {
+        return 'primary residence';
+    } else if (account.retirement === true) {
+        return `retirement ${account.type}`;
+    }
+    return account.type;
+}
+
+/**
+ * Get accounts with metadata and applied debt
+ * Shared logic for getting account-level data with categorization
+ * @param {Array} sources - Array of SnapshotData sources
+ * @param {Object} manifest - Manifest data with account metadata
+ * @param {boolean} currentMonthOnly - If true, use valueByAccount (current month), else use all data
+ * @returns {Array} Array of accounts with metadata and debt applied
+ */
+function getAccountsWithMetadata(sources, manifest, currentMonthOnly = true) {
+    // Get values by account from all sources
     const accountValues = [];
 
     sources.forEach(source => {
-        const byAccount = source.valueByAccount();
+        const byAccount = currentMonthOnly ? source.valueByAccount() : source.data;
         byAccount.forEach(row => {
             accountValues.push({
                 account: row.account,
                 value: row.value,
-                sourceType: source.type  // Keep track of source type
+                month: row.month,
+                sourceType: source.sourceName
             });
         });
     });
 
-    // Merge with manifest metadata and use manifest type
+    // Merge with manifest metadata
     const assetsWithMetadata = accountValues.map(row => {
         const meta = manifest.find(m => m.account === row.account);
 
@@ -368,52 +386,51 @@ function computeAssetAllocation(sources, manifest) {
         return {
             account: row.account,
             value: row.value,
-            type: meta.type || row.sourceType,  // Use manifest type, fallback to source type
+            month: row.month,
+            type: meta.type || row.sourceType,
             retirement: meta.retirement === true || meta.retirement === 'true' || meta.retirement === 'TRUE',
             primary_residence: meta.primary_residence === true || meta.primary_residence === 'true' || meta.primary_residence === 'TRUE',
             debt_applies_to: meta.debt_applies_to || ''
         };
-    }).filter(row => row !== null);  // Remove accounts not in manifest
+    }).filter(row => row !== null);
 
-    // Apply debt to applicable accounts (matching Python logic)
+    // Apply debt to applicable accounts
     const assets = assetsWithMetadata.map(row => {
         let applicableDebt = 0;
 
         if (row.type !== 'debt') {
             // Find debt that applies to this account
             const debts = assetsWithMetadata.filter(d =>
-                d.type === 'debt' && d.debt_applies_to === row.account
+                d.type === 'debt' &&
+                d.debt_applies_to === row.account &&
+                (!row.month || d.month === row.month) // Match month if available
             );
             applicableDebt = debts.reduce((sum, d) => sum + d.value, 0);
         }
 
         return {
             ...row,
-            value: row.value + applicableDebt
+            value: row.value + applicableDebt,
+            category: categorizeAccount(row)
         };
     });
 
     // Filter out debt accounts (they've been applied)
-    const filteredAssets = assets.filter(a => a.type !== 'debt');
+    return assets.filter(a => a.type !== 'debt');
+}
 
-    // Categorize each asset
-    const categorized = filteredAssets.map(row => {
-        let category = row.type;
-
-        if (row.primary_residence === true) {
-            category = 'primary residence';
-        } else if (row.retirement === true) {
-            category = `retirement ${row.type}`;
-        }
-
-        return {
-            category,
-            value: row.value
-        };
-    });
+/**
+ * Compute asset allocation by category (replicates Python asset categorization logic)
+ * @param {Array} sources - Array of SnapshotData sources (cash, property, debt, securities)
+ * @param {Object} manifest - Manifest data with account metadata
+ * @returns {Array} Array of {category, value, proportion} sorted by value descending
+ */
+function computeAssetAllocation(sources, manifest) {
+    // Get accounts with metadata and debt applied using shared logic
+    const accountsWithMetadata = getAccountsWithMetadata(sources, manifest, true);
 
     // Group by category and sum
-    const categoryGroups = groupBy(categorized, item => item.category);
+    const categoryGroups = groupBy(accountsWithMetadata, item => item.category);
     const aggregated = Array.from(categoryGroups.entries()).map(([category, items]) => ({
         category,
         value: items.reduce((sum, item) => sum + item.value, 0)

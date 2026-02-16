@@ -5,10 +5,10 @@
  * @param {string} canvasId - Canvas element ID
  * @param {Object} data - Chart data with months and values
  * @param {Object} classified - Classified color scheme
- * @param {boolean} verbose - Show detailed source breakdown in tooltip
- * @param {Object} sourceBreakdowns - Optional source breakdowns by month {month: {cash, property, debt, securities}}
+ * @param {boolean} verbose - Show detailed category breakdown in tooltip
+ * @param {Object} categoryBreakdowns - Optional category breakdowns by month {month: {category: value}}
  */
-function createAllTimeNetWorthChart(canvasId, data, classified, verbose = false, sourceBreakdowns = null) {
+function createAllTimeNetWorthChart(canvasId, data, classified, verbose = false, categoryBreakdowns = null) {
     const ctx = document.getElementById(canvasId);
 
     // Destroy existing chart if it exists
@@ -65,21 +65,24 @@ function createAllTimeNetWorthChart(canvasId, data, classified, verbose = false,
                             const value = context.parsed.y;
                             const month = context.label;
 
-                            if (!verbose || !sourceBreakdowns || !sourceBreakdowns[month]) {
+                            if (!verbose || !categoryBreakdowns || !categoryBreakdowns[month]) {
                                 // Simple mode: just show total
                                 return 'Total: $' + (value / 1000).toFixed(1) + 'k';
                             }
 
-                            // Verbose mode: show breakdown
-                            const breakdown = sourceBreakdowns[month];
-                            return [
-                                'Total: $' + (value / 1000).toFixed(1) + 'k',
-                                '',
-                                'Cash: $' + ((breakdown.cash || 0) / 1000).toFixed(1) + 'k',
-                                'Property: $' + ((breakdown.property || 0) / 1000).toFixed(1) + 'k',
-                                'Securities: $' + ((breakdown.securities || 0) / 1000).toFixed(1) + 'k',
-                                'Debt: $' + ((breakdown.debt || 0) / 1000).toFixed(1) + 'k'
-                            ];
+                            // Verbose mode: show categorized breakdown
+                            const breakdown = categoryBreakdowns[month];
+                            const labels = ['Total: $' + (value / 1000).toFixed(1) + 'k', ''];
+
+                            // Add each category dynamically
+                            Object.entries(breakdown)
+                                .sort((a, b) => b[1] - a[1]) // Sort by value descending
+                                .forEach(([category, categoryValue]) => {
+                                    const formattedCategory = category.charAt(0).toUpperCase() + category.slice(1);
+                                    labels.push(formattedCategory + ': $' + (categoryValue / 1000).toFixed(1) + 'k');
+                                });
+
+                            return labels;
                         }
                     }
                 }

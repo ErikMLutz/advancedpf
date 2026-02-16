@@ -1,7 +1,7 @@
 // 12 Month Net Worth Chart
 
 /**
- * Create 12-month net worth bar chart with year-over-year comparison
+ * Create 12-month net worth stacked bar chart with year-over-year comparison
  * @param {string} canvasId - Canvas element ID
  * @param {Array} data - Chart data from compute_value_over_last_12_months
  * @param {Object} classified - Classified color scheme
@@ -16,8 +16,8 @@ function create12MonthNetWorthChart(canvasId, data, classified) {
 
     // Extract data
     const months = data.map(d => d.month);
-    const thisYearValues = data.map(d => d.value);
     const lastYearValues = data.map(d => d.last_year_value);
+    const changes = data.map(d => d.value - d.last_year_value);
 
     window.netWorth12MonthsChart = new Chart(ctx, {
         type: 'bar',
@@ -25,17 +25,17 @@ function create12MonthNetWorthChart(canvasId, data, classified) {
             labels: months,
             datasets: [
                 {
-                    label: 'this year',
-                    data: thisYearValues,
+                    label: 'last year',
+                    data: lastYearValues,
                     backgroundColor: classified.chart1,
                     barPercentage: 0.9,
                     categoryPercentage: 0.9
                 },
                 {
-                    label: 'last year',
-                    data: lastYearValues,
+                    label: 'change',
+                    data: changes,
                     backgroundColor: classified.chart2,
-                    barPercentage: 0.5,
+                    barPercentage: 0.9,
                     categoryPercentage: 0.9
                 }
             ]
@@ -79,14 +79,33 @@ function create12MonthNetWorthChart(canvasId, data, classified) {
                             return context[0].label;
                         },
                         label: function(context) {
+                            const datasetLabel = context.dataset.label;
                             const value = context.parsed.y;
-                            return context.dataset.label + ': $' + (value / 1000).toFixed(0) + 'k';
+
+                            if (datasetLabel === 'last year') {
+                                return 'last year: $' + (value / 1000).toFixed(0) + 'k';
+                            } else {
+                                // For change, show this year's total value (stacked)
+                                const lastYearValue = context.chart.data.datasets[0].data[context.dataIndex];
+                                const thisYearValue = lastYearValue + value;
+                                return 'this year: $' + (thisYearValue / 1000).toFixed(0) + 'k';
+                            }
+                        },
+                        footer: function(context) {
+                            // Show the change amount
+                            const change = context[1] ? context[1].parsed.y : 0;
+                            if (change !== 0) {
+                                const sign = change > 0 ? '+' : '';
+                                return '\nchange: ' + sign + '$' + (change / 1000).toFixed(0) + 'k';
+                            }
+                            return '';
                         }
                     }
                 }
             },
             scales: {
                 x: {
+                    stacked: true,
                     ticks: {
                         color: classified.textSubtle,
                         maxRotation: 45,
@@ -108,6 +127,7 @@ function create12MonthNetWorthChart(canvasId, data, classified) {
                     }
                 },
                 y: {
+                    stacked: true,
                     ticks: {
                         color: classified.textSubtle,
                         font: {

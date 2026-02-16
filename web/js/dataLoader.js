@@ -57,9 +57,13 @@ async function loadAllData() {
         }
 
         // Parse dates for snapshot and event data
+        // Use local time to avoid timezone offset issues
         const parseDate = (item) => {
             if (item.date) {
-                item.date = new Date(item.date);
+                const dateStr = item.date;
+                // Parse YYYY-MM-DD as local date (not UTC)
+                const [year, month, day] = dateStr.split('-').map(Number);
+                item.date = new Date(year, month - 1, day || 1);
             }
             return item;
         };
