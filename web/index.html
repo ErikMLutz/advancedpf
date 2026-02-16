@@ -163,51 +163,14 @@
 
                         <!-- Theme Details (Preview + Mapping) -->
                         <div>
-                            <!-- Theme Preview -->
-                            <div class="pt-4 border-t"
-                                 :style="`border-color: ${theme.classified.backgroundAlt};`">
-                            <h4 class="text-sm font-light mb-3 opacity-70">Theme Preview</h4>
-
-                            <!-- Color Palette Table -->
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-xs">
-                                    <thead>
-                                        <tr>
-                                            <th class="text-left font-light py-2 pr-4 opacity-70">Color</th>
-                                            <th class="font-light py-2 px-1 opacity-70">100</th>
-                                            <th class="font-light py-2 px-1 opacity-70">200</th>
-                                            <th class="font-light py-2 px-1 opacity-70">300</th>
-                                            <th class="font-light py-2 px-1 opacity-70">400</th>
-                                            <th class="font-light py-2 px-1 opacity-70">500</th>
-                                            <th class="font-light py-2 px-1 opacity-70">600</th>
-                                            <th class="font-light py-2 px-1 opacity-70">700</th>
-                                            <th class="font-light py-2 px-1 opacity-70">800</th>
-                                            <th class="font-light py-2 px-1 opacity-70">900</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <template x-for="(colorFamily, familyName) in getThemePalette()" :key="familyName">
-                                            <tr :style="`border-color: ${theme.classified.backgroundAlt};`" class="border-t">
-                                                <td class="text-left font-light py-2 pr-4 opacity-70" x-text="formatColorName(familyName)"></td>
-                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['100']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
-                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['200']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
-                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['300']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
-                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['400']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
-                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['500']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
-                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['600']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
-                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['700']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
-                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['800']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
-                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['900']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
-                                            </tr>
-                                        </template>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                            <!-- Theme Mapping Editor -->
+                            <!-- Theme Mapping Editor & Preview -->
                             <div class="pt-8 border-t"
                                  :style="`border-color: ${theme.classified.backgroundAlt};`">
+
+                            <!-- Split Layout: Mapping (left) + Preview (right) -->
+                            <div class="flex gap-6 items-stretch">
+                                <!-- Left: Theme Mapping Table -->
+                                <div class="w-1/2">
                             <div class="flex items-center justify-between mb-4">
                                 <h4 class="text-sm font-light opacity-70">Theme Mapping</h4>
 
@@ -297,6 +260,169 @@
                                     </div>
                                 </template>
                             </div>
+                                </div><!-- End Left: Theme Mapping Table -->
+
+                                <!-- Right: Live Preview -->
+                                <div class="w-1/2"
+                                     x-data="{
+                                         sampleView: 'month',
+                                         initPreviewChart() {
+                                             setTimeout(() => {
+                                                 const ctx = document.getElementById('themePreviewChart');
+                                                 if (!ctx) {
+                                                     console.error('Preview chart canvas not found');
+                                                     return;
+                                                 }
+
+                                                 new Chart(ctx, {
+                                                     type: 'bar',
+                                                     data: {
+                                                         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                                                         datasets: [
+                                                             {
+                                                                 type: 'bar',
+                                                                 label: 'Assets',
+                                                                 data: [65, 70, 75, 80, 85, 90],
+                                                                 backgroundColor: '#4e79a7'
+                                                             },
+                                                             {
+                                                                 type: 'bar',
+                                                                 label: 'Income',
+                                                                 data: [45, 50, 48, 52, 55, 58],
+                                                                 backgroundColor: '#f28e2c'
+                                                             },
+                                                             {
+                                                                 type: 'line',
+                                                                 label: 'Net Worth',
+                                                                 data: [110, 120, 123, 132, 140, 148],
+                                                                 borderColor: '#e15759',
+                                                                 backgroundColor: 'transparent',
+                                                                 borderWidth: 2
+                                                             },
+                                                             {
+                                                                 type: 'line',
+                                                                 label: 'Target',
+                                                                 data: [100, 110, 120, 130, 140, 150],
+                                                                 borderColor: '#76b7b2',
+                                                                 backgroundColor: 'transparent',
+                                                                 borderWidth: 2,
+                                                                 borderDash: [5, 5]
+                                                             }
+                                                         ]
+                                                     },
+                                                     options: {
+                                                         responsive: true,
+                                                         maintainAspectRatio: false,
+                                                         interaction: { mode: 'index', intersect: false },
+                                                         scales: {
+                                                             x: {
+                                                                 grid: { color: 'rgba(128, 128, 128, 0.2)' },
+                                                                 ticks: { color: '#666' }
+                                                             },
+                                                             y: {
+                                                                 grid: { color: 'rgba(128, 128, 128, 0.2)' },
+                                                                 ticks: { color: '#666' }
+                                                             }
+                                                         },
+                                                         plugins: {
+                                                             legend: {
+                                                                 labels: { color: '#666' }
+                                                             }
+                                                         }
+                                                     }
+                                                 });
+                                             }, 100);
+                                         }
+                                     }"
+                                     x-init="initPreviewChart()">
+                                    <h4 class="text-sm font-light opacity-70 mb-4">Live Preview</h4>
+
+                                    <div class="space-y-4"
+                                         :style="`background-color: ${backgroundColor};`">
+
+                                        <!-- Title & Subtitle -->
+                                        <div>
+                                            <h3 class="text-2xl font-light mb-1"
+                                                :style="`color: ${theme.classified.text};`">
+                                                Sample Dashboard
+                                            </h3>
+                                            <p class="text-sm font-light opacity-70"
+                                               :style="`color: ${theme.classified.text};`">
+                                                See your theme changes in real-time
+                                            </p>
+                                        </div>
+
+                                        <!-- Interactive Buttons -->
+                                        <div class="flex gap-2">
+                                            <button @click="sampleView = 'month'"
+                                                    :style="`border-color: ${theme.classified.backgroundAlt}; ${sampleView === 'month' ? 'opacity: 1;' : 'opacity: 0.5;'}`"
+                                                    class="px-3 py-1.5 text-sm border hover:opacity-100 transition-opacity">
+                                                Month View
+                                            </button>
+                                            <button @click="sampleView = 'year'"
+                                                    :style="`border-color: ${theme.classified.backgroundAlt}; ${sampleView === 'year' ? 'opacity: 1;' : 'opacity: 0.5;'}`"
+                                                    class="px-3 py-1.5 text-sm border hover:opacity-100 transition-opacity">
+                                                Year View
+                                            </button>
+                                        </div>
+
+                                        <!-- Sample Text -->
+                                        <p class="text-sm leading-relaxed"
+                                           :style="`color: ${theme.classified.text};`">
+                                            This preview demonstrates how your theme appears across different UI elements.
+                                            All four chart colors are visible in the graph below.
+                                        </p>
+
+                                        <!-- Chart Preview -->
+                                        <div style="position: relative; height: 320px; width: 100%;">
+                                            <canvas id="themePreviewChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div><!-- End Right: Live Preview -->
+                            </div><!-- End Split Layout -->
+
+                            <!-- Theme Colors -->
+                            <div class="pt-8 border-t"
+                                 :style="`border-color: ${theme.classified.backgroundAlt};`">
+                            <h4 class="text-sm font-light mb-3 opacity-70">Theme Colors</h4>
+
+                            <!-- Color Palette Table -->
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-xs">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-left font-light py-2 pr-4 opacity-70">Color</th>
+                                            <th class="font-light py-2 px-1 opacity-70">100</th>
+                                            <th class="font-light py-2 px-1 opacity-70">200</th>
+                                            <th class="font-light py-2 px-1 opacity-70">300</th>
+                                            <th class="font-light py-2 px-1 opacity-70">400</th>
+                                            <th class="font-light py-2 px-1 opacity-70">500</th>
+                                            <th class="font-light py-2 px-1 opacity-70">600</th>
+                                            <th class="font-light py-2 px-1 opacity-70">700</th>
+                                            <th class="font-light py-2 px-1 opacity-70">800</th>
+                                            <th class="font-light py-2 px-1 opacity-70">900</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="(colorFamily, familyName) in getThemePalette()" :key="familyName">
+                                            <tr :style="`border-color: ${theme.classified.backgroundAlt};`" class="border-t">
+                                                <td class="text-left font-light py-2 pr-4 opacity-70" x-text="formatColorName(familyName)"></td>
+                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['100']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
+                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['200']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
+                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['300']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
+                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['400']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
+                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['500']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
+                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['600']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
+                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['700']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
+                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['800']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
+                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['900']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
                         </div>
                         </div><!-- End theme details wrapper -->
                     </div>
@@ -531,7 +657,12 @@
                 formatPurposeLabel(purpose) {
                     // Convert camelCase to lowercase with spaces
                     // e.g., backgroundAlt -> background alt
-                    return purpose.replace(/([A-Z])/g, ' $1').toLowerCase().trim();
+                    // Also handle chartN -> chart N
+                    return purpose
+                        .replace(/([A-Z])/g, ' $1')
+                        .replace(/chart(\d)/g, 'chart $1')
+                        .toLowerCase()
+                        .trim();
                 },
 
                 getMappingPurposes() {
