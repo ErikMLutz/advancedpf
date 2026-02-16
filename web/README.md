@@ -20,6 +20,24 @@ Clean, minimal personal finance dashboard built with Alpine.js and Tailwind CSS.
 - Clean typography
 - Flexible color schemes (2-10 colors)
 - Simple, local-first
+- **One chart per file** - Token-efficient for future edits
+
+## File Structure
+
+```
+web/
+├── index.html                    # Main page, Alpine.js app
+├── js/
+│   ├── colorSchemes.js          # Theme definitions & utilities
+│   └── chart-netWorthAllTime.js # All-time net worth chart
+│       # Future: chart-netWorth12Month.js, chart-spending.js, etc.
+└── README.md
+```
+
+**Why one chart per file?**
+- Token efficiency: Only read index.html + specific chart file when editing
+- Modularity: Easy to add/remove/modify individual charts
+- Clear organization: Each chart is self-contained
 
 ## Running
 
@@ -94,11 +112,15 @@ oceanBlue: {
 ✅ Settings modal with gear icon
 ✅ Theme selector with color swatches
 ✅ GitHub link in header
-✅ Structured for future settings
+✅ First chart: All-time net worth line chart (Chart.js)
+✅ Fake data generation (10 years of net worth data)
+✅ Charts update dynamically with theme changes
+✅ Modular chart structure (easy to add/move charts)
 
 ### Next Steps
 
+- Add remaining charts (12-month comparison, spending, etc.)
 - Add data loading (CSV files)
-- Add charts (Chart.js)
+- Connect charts to real data
 - Add PDF export button to settings
 - Add more themes as needed

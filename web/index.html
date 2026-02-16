@@ -5,14 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AdvancedPF - Personal Finance Dashboard</title>
 
-    <!-- Tailwind CSS CDN -->
+    <!-- Tailwind CSS CDN (shows console warning in dev - safe to ignore for local use) -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Alpine.js Plugins (must load before Alpine.js) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
 
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
     <!-- Color Schemes -->
     <script src="js/colorSchemes.js"></script>
+    <script src="js/colorClassifier.js"></script>
+
+    <!-- Charts (each chart in separate file for token efficiency) -->
+    <script src="js/chart-netWorthAllTime.js"></script>
 </head>
 <body>
     <!-- Alpine.js App -->
@@ -97,7 +107,7 @@
                             <div x-data="{ themeDropdownOpen: false }" class="relative">
                                 <!-- Dropdown Button -->
                                 <button @click="themeDropdownOpen = !themeDropdownOpen"
-                                        :style="`border-color: ${colorScheme.colors[1]};`"
+                                        :style="`border-color: ${colorScheme.classified.backgroundAlt};`"
                                         class="w-full flex items-center justify-between px-4 py-3 border transition-opacity hover:opacity-70">
                                     <!-- Theme name (left) -->
                                     <span class="font-light" x-text="colorScheme.name"></span>
@@ -105,7 +115,7 @@
                                     <div class="flex items-center gap-3">
                                         <!-- Current theme colors preview (right) -->
                                         <div class="flex gap-1">
-                                            <template x-for="(color, index) in getAllColorSchemes()[currentScheme].colors.slice(0, 5)" :key="index">
+                                            <template x-for="(color, index) in colorScheme.colors.slice(0, 5)" :key="index">
                                                 <div :style="`background-color: ${color};`"
                                                      class="w-4 h-4"></div>
                                             </template>
@@ -128,7 +138,7 @@
                                      x-transition:leave="ease-in duration-150"
                                      x-transition:leave-start="translate-y-0 opacity-100"
                                      x-transition:leave-end="-translate-y-2 opacity-0"
-                                     :style="`background-color: ${backgroundColor}; border-color: ${colorScheme.colors[1]};`"
+                                     :style="`background-color: ${backgroundColor}; border-color: ${colorScheme.classified.backgroundAlt};`"
                                      class="absolute z-10 w-full mt-1 border overflow-hidden"
                                      x-cloak>
 
@@ -137,7 +147,7 @@
                                         <button @click="switchScheme(schemeKey); themeDropdownOpen = false"
                                                 :class="currentScheme === schemeKey ? 'opacity-100' : 'opacity-70'"
                                                 class="w-full flex items-center justify-between px-4 py-3 hover:opacity-100 transition-opacity border-b"
-                                                :style="`border-color: ${colorScheme.colors[1]};`">
+                                                :style="`border-color: ${colorScheme.classified.backgroundAlt};`">
                                             <!-- Theme name (left) -->
                                             <span class="font-light" x-text="scheme.name"></span>
 
@@ -156,7 +166,7 @@
 
                         <!-- Placeholder for future settings -->
                         <div class="opacity-50 text-sm font-light pt-4 border-t"
-                             :style="`border-color: ${colorScheme.colors[1]};`">
+                             :style="`border-color: ${colorScheme.classified.backgroundAlt};`">
                             Additional settings coming soon...
                         </div>
 
@@ -170,15 +180,34 @@
         </template>
 
         <!-- Main Content -->
-        <div class="flex flex-col items-center justify-center min-h-screen">
-            <h1 class="text-6xl font-light tracking-wide mb-4"
-                :style="`color: ${textColor};`">
-                AdvancedPF
-            </h1>
-            <p class="text-xl font-light tracking-wider opacity-70"
-               :style="`color: ${textColor};`">
-                personal finance: simple, local.
-            </p>
+        <div class="flex flex-col items-center min-h-screen px-8 py-16">
+            <!-- Header Section -->
+            <div class="text-center mb-12">
+                <h1 class="text-6xl font-light tracking-wide mb-4"
+                    :style="`color: ${textColor};`">
+                    AdvancedPF
+                </h1>
+                <p class="text-xl font-light tracking-wider opacity-70"
+                   :style="`color: ${textColor};`">
+                    personal finance: simple, local.
+                </p>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="w-full max-w-6xl">
+                <!-- Net Worth Chart Container -->
+                <div class="w-full mb-8">
+                    <h2 class="text-2xl font-light mb-4"
+                        :style="`color: ${colorScheme ? colorScheme.classified.text : textColor};`">
+                        Net Worth
+                    </h2>
+                    <div style="position: relative; height: 400px; width: 100%;">
+                        <canvas id="netWorthChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Future charts go here -->
+            </div>
         </div>
     </div>
 
@@ -197,20 +226,38 @@
                 textColor: '#ffffff',
                 colorScheme: null,
                 settingsOpen: false,
+                netWorthData: null,
 
                 init() {
                     this.loadColorScheme();
+                    this.loadData();
+                    this.renderCharts();
                 },
 
                 loadColorScheme() {
-                    this.colorScheme = getColorScheme(this.currentScheme);
-                    this.backgroundColor = this.colorScheme.colors[0];
-                    this.textColor = getContrastTextColor(this.backgroundColor);
+                    this.colorScheme = getClassifiedColorScheme(this.currentScheme);
+                    this.backgroundColor = this.colorScheme.classified.background;
+                    this.textColor = this.colorScheme.classified.text;
+                },
+
+                loadData() {
+                    // Generate fake data (will be replaced with real data later)
+                    this.netWorthData = generateFakeNetWorthData();
+                },
+
+                renderCharts() {
+                    // Render net worth chart
+                    createAllTimeNetWorthChart(
+                        'netWorthChart',
+                        this.netWorthData,
+                        this.colorScheme.classified
+                    );
                 },
 
                 switchScheme(schemeName) {
                     this.currentScheme = schemeName;
                     this.loadColorScheme();
+                    this.renderCharts(); // Re-render charts with new colors
                 },
 
                 getAllColorSchemes() {
