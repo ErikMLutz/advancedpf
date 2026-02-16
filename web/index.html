@@ -274,32 +274,59 @@
                                 <div class="w-1/2"
                                      x-data="{
                                          sampleView: 'month',
+
+                                         monthData: {
+                                             labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                                             assets: [65, 70, 75, 80, 85, 90],
+                                             income: [45, 50, 48, 52, 55, 58],
+                                             netWorth: [110, 120, 123, 132, 140, 148],
+                                             target: [100, 110, 120, 130, 140, 150]
+                                         },
+
+                                         yearData: {
+                                             labels: ['2021', '2022', '2023', '2024', '2025', '2026'],
+                                             assets: [400, 480, 550, 620, 710, 800],
+                                             income: [280, 310, 340, 380, 420, 450],
+                                             netWorth: [680, 790, 890, 1000, 1130, 1250],
+                                             target: [600, 750, 900, 1050, 1200, 1350]
+                                         },
+
+                                         getChartInstance() {
+                                             return window._previewChartInstance || null;
+                                         },
+
+                                         setChartInstance(chart) {
+                                             window._previewChartInstance = chart;
+                                         },
+
                                          initPreviewChart() {
                                              setTimeout(() => {
                                                  const ctx = document.getElementById('themePreviewChart');
                                                  if (!ctx) return;
 
-                                                 new Chart(ctx, {
+                                                 const data = this.sampleView === 'month' ? this.monthData : this.yearData;
+
+                                                 this.setChartInstance(new Chart(ctx, {
                                                      type: 'bar',
                                                      data: {
-                                                         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                                                         labels: data.labels,
                                                          datasets: [
                                                              {
                                                                  type: 'bar',
                                                                  label: 'Assets',
-                                                                 data: [65, 70, 75, 80, 85, 90],
+                                                                 data: data.assets,
                                                                  backgroundColor: '#4e79a7'
                                                              },
                                                              {
                                                                  type: 'bar',
                                                                  label: 'Income',
-                                                                 data: [45, 50, 48, 52, 55, 58],
+                                                                 data: data.income,
                                                                  backgroundColor: '#f28e2c'
                                                              },
                                                              {
                                                                  type: 'line',
                                                                  label: 'Net Worth',
-                                                                 data: [110, 120, 123, 132, 140, 148],
+                                                                 data: data.netWorth,
                                                                  borderColor: '#e15759',
                                                                  backgroundColor: 'transparent',
                                                                  borderWidth: 2
@@ -307,7 +334,7 @@
                                                              {
                                                                  type: 'line',
                                                                  label: 'Target',
-                                                                 data: [100, 110, 120, 130, 140, 150],
+                                                                 data: data.target,
                                                                  borderColor: '#76b7b2',
                                                                  backgroundColor: 'transparent',
                                                                  borderWidth: 2,
@@ -335,8 +362,25 @@
                                                              }
                                                          }
                                                      }
-                                                 });
+                                                 }));
                                              }, 100);
+                                         },
+
+                                         updateChartData() {
+                                             const chart = this.getChartInstance();
+                                             if (!chart) return;
+
+                                             const data = this.sampleView === 'month' ? this.monthData : this.yearData;
+
+                                             // Update chart data
+                                             chart.data.labels = data.labels;
+                                             chart.data.datasets[0].data = data.assets;
+                                             chart.data.datasets[1].data = data.income;
+                                             chart.data.datasets[2].data = data.netWorth;
+                                             chart.data.datasets[3].data = data.target;
+
+                                             // Update without animation for instant feedback
+                                             chart.update('none');
                                          }
                                      }"
                                      x-init="initPreviewChart()">
@@ -359,12 +403,12 @@
 
                                         <!-- Interactive Buttons -->
                                         <div class="flex gap-2">
-                                            <button @click="sampleView = 'month'"
+                                            <button @click="sampleView = 'month'; updateChartData()"
                                                     :style="`border-color: ${theme.classified.backgroundAlt}; ${sampleView === 'month' ? 'opacity: 1;' : 'opacity: 0.5;'}`"
                                                     class="px-3 py-1.5 text-sm border hover:opacity-100 transition-opacity">
                                                 Month View
                                             </button>
-                                            <button @click="sampleView = 'year'"
+                                            <button @click="sampleView = 'year'; updateChartData()"
                                                     :style="`border-color: ${theme.classified.backgroundAlt}; ${sampleView === 'year' ? 'opacity: 1;' : 'opacity: 0.5;'}`"
                                                     class="px-3 py-1.5 text-sm border hover:opacity-100 transition-opacity">
                                                 Year View
