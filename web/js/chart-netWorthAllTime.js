@@ -5,8 +5,10 @@
  * @param {string} canvasId - Canvas element ID
  * @param {Object} data - Chart data with months and values
  * @param {Object} classified - Classified color scheme
+ * @param {boolean} verbose - Show detailed source breakdown in tooltip
+ * @param {Object} sourceBreakdowns - Optional source breakdowns by month {month: {cash, property, debt, securities}}
  */
-function createAllTimeNetWorthChart(canvasId, data, classified) {
+function createAllTimeNetWorthChart(canvasId, data, classified, verbose = false, sourceBreakdowns = null) {
     const ctx = document.getElementById(canvasId);
 
     // Destroy existing chart if it exists
@@ -60,9 +62,24 @@ function createAllTimeNetWorthChart(canvasId, data, classified) {
                             return context[0].label;
                         },
                         label: function(context) {
-                            // Format as currency
                             const value = context.parsed.y;
-                            return '$' + (value / 1000).toFixed(1) + 'k';
+                            const month = context.label;
+
+                            if (!verbose || !sourceBreakdowns || !sourceBreakdowns[month]) {
+                                // Simple mode: just show total
+                                return 'Total: $' + (value / 1000).toFixed(1) + 'k';
+                            }
+
+                            // Verbose mode: show breakdown
+                            const breakdown = sourceBreakdowns[month];
+                            return [
+                                'Total: $' + (value / 1000).toFixed(1) + 'k',
+                                '',
+                                'Cash: $' + ((breakdown.cash || 0) / 1000).toFixed(1) + 'k',
+                                'Property: $' + ((breakdown.property || 0) / 1000).toFixed(1) + 'k',
+                                'Securities: $' + ((breakdown.securities || 0) / 1000).toFixed(1) + 'k',
+                                'Debt: $' + ((breakdown.debt || 0) / 1000).toFixed(1) + 'k'
+                            ];
                         }
                     }
                 }
