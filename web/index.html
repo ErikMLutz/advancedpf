@@ -161,8 +161,8 @@
                             </div>
                         </div>
 
-                        <!-- Theme Details (Preview + Mapping) - Keyed to force fresh render on theme change -->
-                        <div :key="'theme-details-' + currentScheme">
+                        <!-- Theme Details (Preview + Mapping) -->
+                        <div>
                             <!-- Theme Preview -->
                             <div class="pt-4 border-t"
                                  :style="`border-color: ${theme.classified.backgroundAlt};`">
@@ -235,8 +235,7 @@
                                         <div class="w-32 text-sm font-light opacity-70" x-text="formatPurposeLabel(purpose)"></div>
 
                                         <!-- Color Family Dropdown -->
-                                        <div x-data="() => ({ open: false, closeTimer: null, openUpward: false })"
-                                             x-init="open = false"
+                                        <div x-data="{ open: false, closeTimer: null, openUpward: false }"
                                              @mouseleave="closeTimer = setTimeout(() => open = false, 500)"
                                              @mouseenter="clearTimeout(closeTimer)"
                                              class="relative">
@@ -248,10 +247,9 @@
                                             </button>
                                             <div x-show="open"
                                                  @click.away="open = false"
-                                                 :style="`background-color: ${backgroundColor}; border-color: ${theme.classified.backgroundAlt};`"
+                                                 :style="{ 'background-color': backgroundColor, 'border-color': theme.classified.backgroundAlt }"
                                                  :class="openUpward ? 'bottom-full mb-1' : 'top-full mt-1'"
-                                                 class="absolute z-20 border max-h-60 overflow-y-auto"
-                                                 x-cloak>
+                                                 class="absolute z-20 border max-h-60 overflow-y-auto">
                                                 <template x-for="familyName in Object.keys(getThemePalette())" :key="familyName">
                                                     <button @click="updateMapping(purpose, familyName, themeMapping[purpose].split('.')[1]); open = false"
                                                             class="block w-full px-3 py-2 text-sm text-left hover:opacity-70 flex items-center justify-between gap-2">
@@ -268,8 +266,7 @@
                                         </div>
 
                                         <!-- Shade Dropdown -->
-                                        <div x-data="() => ({ open: false, closeTimer: null, openUpward: false })"
-                                             x-init="open = false"
+                                        <div x-data="{ open: false, closeTimer: null, openUpward: false }"
                                              @mouseleave="closeTimer = setTimeout(() => open = false, 500)"
                                              @mouseenter="clearTimeout(closeTimer)"
                                              class="relative">
@@ -280,10 +277,9 @@
                                             </button>
                                             <div x-show="open"
                                                  @click.away="open = false"
-                                                 :style="`background-color: ${backgroundColor}; border-color: ${theme.classified.backgroundAlt};`"
+                                                 :style="{ 'background-color': backgroundColor, 'border-color': theme.classified.backgroundAlt }"
                                                  :class="openUpward ? 'bottom-full mb-1' : 'top-full mt-1'"
-                                                 class="absolute z-20 border max-h-60 overflow-y-auto"
-                                                 x-cloak>
+                                                 class="absolute z-20 border max-h-60 overflow-y-auto">
                                                 <template x-for="shade in ['100', '200', '300', '400', '500', '600', '700', '800', '900']" :key="shade">
                                                     <button @click="updateMapping(purpose, themeMapping[purpose].split('.')[0], shade); open = false"
                                                             class="block w-full px-3 py-2 text-sm text-left hover:opacity-70 flex items-center justify-between gap-2">
