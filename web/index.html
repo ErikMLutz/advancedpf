@@ -291,6 +291,17 @@
                                              target: [600, 750, 900, 1050, 1200, 1350]
                                          },
 
+                                         // Preview colors that update as theme mapping changes
+                                         previewColors: {
+                                             background: '',
+                                             backgroundAlt: '',
+                                             text: '',
+                                             chart1: '',
+                                             chart2: '',
+                                             chart3: '',
+                                             chart4: ''
+                                         },
+
                                          getChartInstance() {
                                              return window._previewChartInstance || null;
                                          },
@@ -299,12 +310,36 @@
                                              window._previewChartInstance = chart;
                                          },
 
+                                         // Get color from current theme mapping
+                                         getPreviewColor(purpose) {
+                                             const path = this.themeMapping[purpose];
+                                             if (!path) return '#ff00ff';
+                                             const [family, shade] = path.split('.');
+                                             const themeObj = THEMES[this.currentScheme];
+                                             return themeObj?.palette[family]?.[shade] || '#ff00ff';
+                                         },
+
+                                         // Update preview colors from theme mapping
+                                         updatePreviewColors() {
+                                             this.previewColors.background = this.getPreviewColor('background');
+                                             this.previewColors.backgroundAlt = this.getPreviewColor('backgroundAlt');
+                                             this.previewColors.text = this.getPreviewColor('text');
+                                             this.previewColors.chart1 = this.getPreviewColor('chart1');
+                                             this.previewColors.chart2 = this.getPreviewColor('chart2');
+                                             this.previewColors.chart3 = this.getPreviewColor('chart3');
+                                             this.previewColors.chart4 = this.getPreviewColor('chart4');
+                                         },
+
                                          initPreviewChart() {
                                              setTimeout(() => {
                                                  const ctx = document.getElementById('themePreviewChart');
                                                  if (!ctx) return;
 
                                                  const data = this.sampleView === 'month' ? this.monthData : this.yearData;
+
+                                                 // Initialize preview colors and store update function for parent to call
+                                                 this.updatePreviewColors();
+                                                 window._updatePreviewColors = () => this.updatePreviewColors();
 
                                                  this.setChartInstance(new Chart(ctx, {
                                                      type: 'bar',
@@ -315,28 +350,32 @@
                                                                  type: 'bar',
                                                                  label: 'Assets',
                                                                  data: data.assets,
-                                                                 backgroundColor: '#4e79a7'
+                                                                 backgroundColor: this.previewColors.chart1
                                                              },
                                                              {
                                                                  type: 'bar',
                                                                  label: 'Income',
                                                                  data: data.income,
-                                                                 backgroundColor: '#f28e2c'
+                                                                 backgroundColor: this.previewColors.chart2
                                                              },
                                                              {
                                                                  type: 'line',
                                                                  label: 'Net Worth',
                                                                  data: data.netWorth,
-                                                                 borderColor: '#e15759',
+                                                                 borderColor: this.previewColors.chart3,
                                                                  backgroundColor: 'transparent',
+                                                                 pointBackgroundColor: this.previewColors.chart3,
+                                                                 pointBorderColor: this.previewColors.chart3,
                                                                  borderWidth: 2
                                                              },
                                                              {
                                                                  type: 'line',
                                                                  label: 'Target',
                                                                  data: data.target,
-                                                                 borderColor: '#76b7b2',
+                                                                 borderColor: this.previewColors.chart4,
                                                                  backgroundColor: 'transparent',
+                                                                 pointBackgroundColor: this.previewColors.chart4,
+                                                                 pointBorderColor: this.previewColors.chart4,
                                                                  borderWidth: 2,
                                                                  borderDash: [5, 5]
                                                              }
@@ -348,17 +387,17 @@
                                                          interaction: { mode: 'index', intersect: false },
                                                          scales: {
                                                              x: {
-                                                                 grid: { color: 'rgba(128, 128, 128, 0.2)' },
-                                                                 ticks: { color: '#666' }
+                                                                 grid: { color: this.previewColors.backgroundAlt },
+                                                                 ticks: { color: this.previewColors.text }
                                                              },
                                                              y: {
-                                                                 grid: { color: 'rgba(128, 128, 128, 0.2)' },
-                                                                 ticks: { color: '#666' }
+                                                                 grid: { color: this.previewColors.backgroundAlt },
+                                                                 ticks: { color: this.previewColors.text }
                                                              }
                                                          },
                                                          plugins: {
                                                              legend: {
-                                                                 labels: { color: '#666' }
+                                                                 labels: { color: this.previewColors.text }
                                                              }
                                                          }
                                                      }
@@ -387,16 +426,16 @@
                                     <h4 class="text-sm font-light opacity-70 mb-4">Live Preview</h4>
 
                                     <div class="space-y-4 p-4 rounded"
-                                         :style="`background-color: ${theme.classified.background}; border: 1px solid ${theme.classified.backgroundAlt};`">
+                                         :style="`background-color: ${previewColors.background}; border: 1px solid ${previewColors.backgroundAlt};`">
 
                                         <!-- Title & Subtitle -->
                                         <div>
                                             <h3 class="text-2xl font-light mb-1"
-                                                :style="`color: ${theme.classified.text};`">
+                                                :style="`color: ${previewColors.text};`">
                                                 Sample Dashboard
                                             </h3>
                                             <p class="text-sm font-light opacity-70"
-                                               :style="`color: ${theme.classified.text};`">
+                                               :style="`color: ${previewColors.text};`">
                                                 See your theme changes in real-time
                                             </p>
                                         </div>
@@ -404,12 +443,12 @@
                                         <!-- Interactive Buttons -->
                                         <div class="flex gap-2">
                                             <button @click="sampleView = 'month'; updateChartData()"
-                                                    :style="`border-color: ${theme.classified.backgroundAlt}; ${sampleView === 'month' ? 'opacity: 1;' : 'opacity: 0.5;'}`"
+                                                    :style="`border-color: ${previewColors.backgroundAlt}; ${sampleView === 'month' ? 'opacity: 1;' : 'opacity: 0.5;'}`"
                                                     class="px-3 py-1.5 text-sm border hover:opacity-100 transition-opacity">
                                                 Month View
                                             </button>
                                             <button @click="sampleView = 'year'; updateChartData()"
-                                                    :style="`border-color: ${theme.classified.backgroundAlt}; ${sampleView === 'year' ? 'opacity: 1;' : 'opacity: 0.5;'}`"
+                                                    :style="`border-color: ${previewColors.backgroundAlt}; ${sampleView === 'year' ? 'opacity: 1;' : 'opacity: 0.5;'}`"
                                                     class="px-3 py-1.5 text-sm border hover:opacity-100 transition-opacity">
                                                 Year View
                                             </button>
@@ -417,7 +456,7 @@
 
                                         <!-- Sample Text -->
                                         <p class="text-sm leading-relaxed"
-                                           :style="`color: ${theme.classified.text};`">
+                                           :style="`color: ${previewColors.text};`">
                                             This preview demonstrates how your theme appears across different UI elements.
                                             All four chart colors are visible in the graph below.
                                         </p>
@@ -456,15 +495,15 @@
                                         <template x-for="(colorFamily, familyName) in getThemePalette()" :key="familyName">
                                             <tr :style="`border-color: ${theme.classified.backgroundAlt};`" class="border-t">
                                                 <td class="text-left font-light py-2 pr-4 opacity-70" x-text="formatColorName(familyName)"></td>
-                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['100']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
-                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['200']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
-                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['300']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
-                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['400']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
-                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['500']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
-                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['600']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
-                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['700']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
-                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['800']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
-                                                <td class="py-2 px-1"><div :style="`background-color: ${colorFamily['900']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6"></div></td>
+                                                <td class="py-2 px-1 text-center"><div :style="`background-color: ${colorFamily['100']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6 inline-block"></div></td>
+                                                <td class="py-2 px-1 text-center"><div :style="`background-color: ${colorFamily['200']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6 inline-block"></div></td>
+                                                <td class="py-2 px-1 text-center"><div :style="`background-color: ${colorFamily['300']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6 inline-block"></div></td>
+                                                <td class="py-2 px-1 text-center"><div :style="`background-color: ${colorFamily['400']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6 inline-block"></div></td>
+                                                <td class="py-2 px-1 text-center"><div :style="`background-color: ${colorFamily['500']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6 inline-block"></div></td>
+                                                <td class="py-2 px-1 text-center"><div :style="`background-color: ${colorFamily['600']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6 inline-block"></div></td>
+                                                <td class="py-2 px-1 text-center"><div :style="`background-color: ${colorFamily['700']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6 inline-block"></div></td>
+                                                <td class="py-2 px-1 text-center"><div :style="`background-color: ${colorFamily['800']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6 inline-block"></div></td>
+                                                <td class="py-2 px-1 text-center"><div :style="`background-color: ${colorFamily['900']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6 inline-block"></div></td>
                                             </tr>
                                         </template>
                                     </tbody>
@@ -689,6 +728,7 @@
                     this.currentScheme = schemeName;
                     this.loadTheme();
                     this.renderCharts(); // Re-render charts with new colors
+                    this.updatePreviewChartColors(); // Update live preview with new theme
                 },
 
                 applyThemeChanges() {
@@ -756,9 +796,54 @@
 
                 updateMapping(purpose, family, shade) {
                     this.themeMapping[purpose] = `${family}.${shade}`;
-                    // Update classified colors for immediate preview
-                    this.theme.classified[purpose] = this.getMappingColor(purpose);
-                    this.renderCharts();
+                    // Update preview chart only (not the whole app theme)
+                    this.updatePreviewChartColors();
+                },
+
+                updatePreviewChartColors() {
+                    const chart = window._previewChartInstance;
+                    if (!chart) return;
+
+                    // Get colors from current theme mapping
+                    const themeObj = THEMES[this.currentScheme];
+                    const getColor = (purpose) => {
+                        const path = this.themeMapping[purpose];
+                        if (!path) return '#ff00ff';
+                        const [family, shade] = path.split('.');
+                        return themeObj?.palette[family]?.[shade] || '#ff00ff';
+                    };
+
+                    // Update chart dataset colors (bars and lines)
+                    chart.data.datasets[0].backgroundColor = getColor('chart1');  // Assets bar
+                    chart.data.datasets[1].backgroundColor = getColor('chart2');  // Income bar
+
+                    // Net Worth line
+                    chart.data.datasets[2].borderColor = getColor('chart3');
+                    chart.data.datasets[2].pointBackgroundColor = getColor('chart3');
+                    chart.data.datasets[2].pointBorderColor = getColor('chart3');
+
+                    // Target line
+                    chart.data.datasets[3].borderColor = getColor('chart4');
+                    chart.data.datasets[3].pointBackgroundColor = getColor('chart4');
+                    chart.data.datasets[3].pointBorderColor = getColor('chart4');
+
+                    // Update axis and legend colors
+                    const textColor = getColor('text');
+                    const gridColor = getColor('backgroundAlt');
+
+                    chart.options.scales.x.grid.color = gridColor;
+                    chart.options.scales.x.ticks.color = textColor;
+                    chart.options.scales.y.grid.color = gridColor;
+                    chart.options.scales.y.ticks.color = textColor;
+                    chart.options.plugins.legend.labels.color = textColor;
+
+                    // Trigger preview panel color update via callback
+                    if (window._updatePreviewColors) {
+                        window._updatePreviewColors();
+                    }
+
+                    // Update without animation for instant feedback
+                    chart.update('none');
                 },
 
                 async copyMappingToClipboard() {
