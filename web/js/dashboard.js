@@ -7,6 +7,7 @@ document.addEventListener('alpine:init', () => {
         // Prevents Alpine from throwing on theme.classified.* before async fetch completes.
         theme: {
             name: 'Pacific Mist Dark',
+            colors: [],
             classified: {
                 background: '#46494c', backgroundAlt: '#4c5c68',
                 text: '#f8f8f8', textSubtle: '#d1cfd2',
@@ -31,6 +32,7 @@ document.addEventListener('alpine:init', () => {
         retirementTaxData: null,
         accountsData: null,
         dataLoadError: null,
+        allThemes: {},
         themeMapping: {},
         themePalette: {},
         newColorName: '',
@@ -47,80 +49,37 @@ document.addEventListener('alpine:init', () => {
             this.loading = true;
             this.loadingProgress = 0;
 
-            // Random target between 60-85% where we'll hang while loading
-            const hangTarget = 70 + Math.floor(Math.random() * 16); // 70-85%
-
-            // Start smooth progress animation
-            const startTime = Date.now();
-            const initialAnimDuration = 1200; // Animate to hang target over 1.2s
-
-            const progressInterval = setInterval(() => {
-                const elapsed = Date.now() - startTime;
-                const progress = Math.min(1, elapsed / initialAnimDuration);
-
-                // Ease out curve for smooth deceleration
-                const easeProgress = 1 - Math.pow(1 - progress, 2);
-                const targetProgress = Math.floor(hangTarget * easeProgress);
-
-                if (targetProgress > this.loadingProgress) {
-                    this.loadingProgress = targetProgress;
-                }
-            }, 16); // ~60fps
-
-            // Ensure minimum 1.5s total load time
-            const minLoadTime = 1500;
-            const loadStartTime = Date.now();
-
             await initThemes();
+            this.allThemes = getAllThemes();
             this.loadTheme();
             await this.loadData();
             this.renderCharts();
 
-            // Wait for minimum load time if needed
-            const loadElapsed = Date.now() - loadStartTime;
-            if (loadElapsed < minLoadTime) {
-                await new Promise(resolve => setTimeout(resolve, minLoadTime - loadElapsed));
-            }
-
-            // Stop the initial animation
-            clearInterval(progressInterval);
-
-            // Animate smoothly from current progress to 100% over 500ms
-            const finalAnimStart = Date.now();
-            const finalAnimDuration = 500;
-            const startProgress = this.loadingProgress;
-
-            const finalInterval = setInterval(() => {
-                const elapsed = Date.now() - finalAnimStart;
-                const progress = Math.min(1, elapsed / finalAnimDuration);
-
-                // Ease out animation
-                const easeProgress = 1 - Math.pow(1 - progress, 3);
-                this.loadingProgress = Math.floor(startProgress + (100 - startProgress) * easeProgress);
-
-                if (this.loadingProgress >= 100) {
-                    clearInterval(finalInterval);
-                    this.loadingProgress = 100;
-                }
-            }, 16); // ~60fps
-
-            // Wait for final animation to complete
-            await new Promise(resolve => setTimeout(resolve, finalAnimDuration));
-
-            // Hold at 100% for a moment before hiding
-            await new Promise(resolve => setTimeout(resolve, 700));
+            this.loadingProgress = 100;
+            await new Promise(resolve => setTimeout(resolve, 200));
             this.loading = false;
         },
 
         loadTheme() {
-            this.theme = getTheme(this.currentScheme);
-            this.backgroundColor = this.theme.classified.background;
-            this.textColor = this.theme.classified.text;
+            // Mutate in-place rather than replacing this.theme entirely.
+            // Replacing the reactive object causes Alpine to temporarily strip all
+            // inline styles (including the loading overlay's display:none) while
+            // it re-creates the reactive proxy — which briefly shows the loading screen.
+            const newTheme = getTheme(this.currentScheme);
+            this.theme.classified = newTheme.classified;
+            this.theme.name = newTheme.name;
+            this.theme.colors = newTheme.colors;
+            this.backgroundColor = newTheme.classified.background;
+            this.textColor = newTheme.classified.text;
 
             // Initialize theme mapping and palette for editing
+            // Palette must be set before mapping: Alpine re-renders between assignments,
+            // and the mapping editor template looks up getThemePalette()[family]. If mapping
+            // is updated first with new family names while palette still has old families,
+            // every swatch expression crashes with "undefined is not an object".
             const themeObj = THEMES[this.currentScheme];
-            this.themeMapping = { ...themeObj.mapping };
             this.themePalette = JSON.parse(JSON.stringify(themeObj.palette));
+            this.themeMapping = { ...themeObj.mapping };
             this.newColorName = '';
             this.newColorHex = '#808080';
             this.newColorNameError = '';
