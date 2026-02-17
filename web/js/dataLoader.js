@@ -1,5 +1,5 @@
 // Finance Dashboard - Data Loader
-// Handles CSV loading using Papa Parse
+// Handles CSV and YAML loading
 
 /**
  * Load a single CSV file
@@ -37,6 +37,29 @@ async function loadCSV(path) {
 }
 
 /**
+ * Load and parse a YAML file, normalizing the manifest's dict-of-accounts
+ * into an array of { account, ...fields } objects with defaults applied.
+ * @param {string} path - Path to YAML file
+ * @returns {Promise<Array>} Normalized manifest rows
+ */
+async function loadManifestYAML(path) {
+    const response = await fetch(path);
+    if (!response.ok) {
+        throw new Error(`Failed to load ${path}: ${response.statusText}`);
+    }
+    const text = await response.text();
+    const parsed = jsyaml.load(text);
+    return Object.entries(parsed.accounts).map(([account, fields]) => ({
+        account,
+        type: fields.type ?? null,
+        retirement: fields.retirement ?? false,
+        debt_applies_to: fields.debt_applies_to ?? null,
+        primary_residence: fields.primary_residence ?? false,
+        ...fields,
+    }));
+}
+
+/**
  * Load all data files in parallel
  * @returns {Promise<Object>} Object containing all loaded data
  */
@@ -48,7 +71,7 @@ async function loadAllData() {
             loadCSV(CONFIG.dataPaths.debt),
             loadCSV(CONFIG.dataPaths.securities),
             loadCSV(CONFIG.dataPaths.credit),
-            loadCSV(CONFIG.dataPaths.manifest),
+            loadManifestYAML(CONFIG.dataPaths.manifest),
             loadCSV(CONFIG.dataPaths.income),
             loadCSV(CONFIG.dataPaths.savings)
         ]);
@@ -75,12 +98,6 @@ async function loadAllData() {
         debt.forEach(parseDate);
         securities.forEach(parseDate);
         credit.forEach(parseDate);
-
-        // Parse boolean fields in manifest
-        manifest.forEach(item => {
-            item.retirement = item.retirement === 'true' || item.retirement === true;
-            item.primary_residence = item.primary_residence === 'true' || item.primary_residence === true;
-        });
 
         return {
             cash,
@@ -112,7 +129,7 @@ function validateData(data) {
         const accounts = [...new Set(source.map(item => item.account))];
         accounts.forEach(account => {
             if (!manifestAccounts.has(account)) {
-                warnings.push(`Account "${account}" in ${sourceName}.csv not found in manifest.csv`);
+                warnings.push(`Account "${account}" in ${sourceName}.csv not found in manifest.yaml`);
             }
         });
     };

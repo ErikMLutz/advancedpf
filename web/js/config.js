@@ -35,7 +35,7 @@ const CONFIG = {
         debt: '/data/debt.csv',
         securities: '/data/securities.csv',
         credit: '/data/credit.csv',
-        manifest: '/data/manifest.csv',
+        manifest: '/data/manifest.yaml',
         income: '/data/income.csv',
         savings: '/data/savings.csv'
     },
