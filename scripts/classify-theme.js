@@ -134,12 +134,32 @@ function classifyTheme(palette) {
     }
     if (!accentAlt) accentAlt = accent;
 
+    // Find textDark (good contrast on light backgrounds, darker than textSubtle)
+    let textDark = null;
+    for (const color of allColors) {
+        if (color.luminance < 0.3) {  // Dark color
+            textDark = color;
+            break;
+        }
+    }
+    if (!textDark) textDark = darkest;
+
+    // Find textDarkSubtle (slightly lighter than textDark)
+    let textDarkSubtle = null;
+    for (const color of allColors) {
+        if (color.luminance > textDark.luminance && color.luminance < 0.4) {
+            textDarkSubtle = color;
+            break;
+        }
+    }
+    if (!textDarkSubtle) textDarkSubtle = textDark;
+
     // Find chart colors (diverse, good contrast)
     const chartColors = [];
     const usedFamilies = new Set();
 
     for (const color of allColors) {
-        if (chartColors.length >= 4) break;
+        if (chartColors.length >= 5) break;
         if (usedFamilies.has(color.family)) continue;
 
         const contrast = getContrastRatio(background.hex, color.hex);
@@ -150,7 +170,7 @@ function classifyTheme(palette) {
     }
 
     // Fill remaining chart colors if needed
-    while (chartColors.length < 4) {
+    while (chartColors.length < 5) {
         chartColors.push(accent);
     }
 
@@ -159,12 +179,15 @@ function classifyTheme(palette) {
         backgroundAlt: backgroundAlt.path,
         text: text.path,
         textSubtle: textSubtle.path,
+        textDark: textDark.path,
+        textDarkSubtle: textDarkSubtle.path,
         accent: accent.path,
         accentAlt: accentAlt.path,
         chart1: chartColors[0].path,
         chart2: chartColors[1].path,
         chart3: chartColors[2].path,
-        chart4: chartColors[3].path
+        chart4: chartColors[3].path,
+        chart5: chartColors[4].path
     };
 }
 

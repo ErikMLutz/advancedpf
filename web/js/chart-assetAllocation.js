@@ -19,12 +19,13 @@ function createAssetAllocationChart(canvasId, data, classified) {
     const values = data.map(d => d.value);
     const proportions = data.map(d => d.proportion);
 
-    // Generate colors using chart colors (cycle through chart1-4)
+    // Generate colors using chart colors (cycle through chart1-5)
     const chartColors = [
         classified.chart1,
         classified.chart2,
         classified.chart3,
-        classified.chart4
+        classified.chart4,
+        classified.chart5
     ];
     const colors = labels.map((_, i) => chartColors[i % chartColors.length]);
 
@@ -43,6 +44,9 @@ function createAssetAllocationChart(canvasId, data, classified) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            layout: {
+                padding: 70  // Add more padding to prevent label cutoff
+            },
             plugins: {
                 legend: {
                     display: false  // Hide legend since we're showing labels on slices
@@ -54,7 +58,7 @@ function createAssetAllocationChart(canvasId, data, classified) {
                     enabled: false  // Disabled since labels are shown on slices
                 },
                 datalabels: {
-                    color: classified.text,
+                    color: classified.textSubtle,
                     font: {
                         size: 11,
                         weight: 400
@@ -65,8 +69,9 @@ function createAssetAllocationChart(canvasId, data, classified) {
                         return `${label}\n$${(value / 1000).toFixed(0)}k\n${(proportion * 100).toFixed(0)}%`;
                     },
                     textAlign: 'center',
-                    anchor: 'center',
-                    align: 'center'
+                    anchor: 'end',     // Position anchor at edge of pie slice
+                    align: 'end',      // Align label away from center (outside)
+                    offset: 4          // Small offset from the edge
                 }
             }
         }

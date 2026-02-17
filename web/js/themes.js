@@ -133,12 +133,15 @@ const THEMES = {
             backgroundAlt: 'dark_teal.300',
             text: 'vanilla_custard.900',
             textSubtle: 'pearl_aqua.700',
+            textDark: 'ink_black.400',
+            textDarkSubtle: 'dark_teal.500',
             accent: 'golden_orange.600',
             accentAlt: 'rusty_spice.600',
             chart1: 'dark_cyan.600',
             chart2: 'pearl_aqua.500',
             chart3: 'golden_orange.500',
-            chart4: 'burnt_caramel.600'
+            chart4: 'burnt_caramel.600',
+            chart5: 'rusty_spice.500'
         }
     },
 
@@ -211,12 +214,15 @@ const THEMES = {
             backgroundAlt: 'blue_slate.500',
             text: 'alabaster_grey.900',
             textSubtle: 'pale_slate.600',
+            textDark: 'iron_grey.200',
+            textDarkSubtle: 'blue_slate.300',
             accent: 'pacific_cyan.600',
             accentAlt: 'pacific_cyan.700',
-            chart1: 'pacific_cyan.500',
-            chart2: 'blue_slate.700',
-            chart3: 'pale_slate.400',
-            chart4: 'alabaster_grey.600'
+            chart1: 'pacific_cyan.900',
+            chart2: 'pacific_cyan.600',
+            chart3: 'blue_slate.700',
+            chart4: 'alabaster_grey.300',
+            chart5: 'pacific_cyan.300'
         }
     },
 
@@ -289,12 +295,15 @@ const THEMES = {
             backgroundAlt: 'pale_slate.700',
             text: 'iron_grey.200',
             textSubtle: 'blue_slate.400',
+            textDark: 'iron_grey.200',
+            textDarkSubtle: 'blue_slate.300',
             accent: 'pacific_cyan.600',
             accentAlt: 'pacific_cyan.500',
             chart1: 'pacific_cyan.600',
             chart2: 'blue_slate.500',
             chart3: 'iron_grey.500',
-            chart4: 'pale_slate.400'
+            chart4: 'pale_slate.400',
+            chart5: 'pacific_cyan.500'
         }
     },
 
@@ -343,12 +352,15 @@ const THEMES = {
             backgroundAlt: 'grey.200',
             text: 'white.500',
             textSubtle: 'grey.700',
+            textDark: 'black.500',
+            textDarkSubtle: 'grey.300',
             accent: 'white.500',
             accentAlt: 'grey.600',
             chart1: 'white.500',
             chart2: 'grey.700',
             chart3: 'grey.500',
-            chart4: 'grey.400'
+            chart4: 'grey.400',
+            chart5: 'grey.300'
         }
     },
 
@@ -397,12 +409,15 @@ const THEMES = {
             backgroundAlt: 'grey.800',
             text: 'black.500',
             textSubtle: 'grey.300',
+            textDark: 'black.500',
+            textDarkSubtle: 'grey.300',
             accent: 'black.500',
             accentAlt: 'grey.400',
             chart1: 'black.500',
             chart2: 'grey.300',
             chart3: 'grey.500',
-            chart4: 'grey.600'
+            chart4: 'grey.600',
+            chart5: 'grey.700'
         }
     }
 };
