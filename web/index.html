@@ -1014,10 +1014,27 @@
                         }
 
                         if (this.savingsData && this.dataLoadError === null) {
+                            // Compute savings rate per year = total savings / income
+                            const incomeByYear = {};
+                            if (this.incomeData) {
+                                this.incomeData.years.forEach((year, i) => {
+                                    incomeByYear[year] = this.incomeData.values[i];
+                                });
+                            }
+                            const savingsRates = this.savingsData.years.map((year, yearIdx) => {
+                                const income = incomeByYear[year];
+                                if (!income) return null;
+                                const totalSavings = this.savingsData.datasets.reduce(
+                                    (sum, ds) => sum + (ds.data[yearIdx] || 0), 0
+                                );
+                                return Math.round(totalSavings / income * 100);
+                            });
+
                             createSavingsChart(
                                 'savingsChart',
                                 this.savingsData,
-                                this.theme.classified
+                                this.theme.classified,
+                                savingsRates
                             );
                         }
                     } catch (error) {

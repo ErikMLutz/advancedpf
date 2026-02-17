@@ -5,8 +5,9 @@
  * @param {string} canvasId - Canvas element ID
  * @param {{ years: string[], datasets: Array<{category: string, data: number[]}> }} data
  * @param {Object} classified - Classified color scheme
+ * @param {Array<number|null>} savingsRates - Savings rate per year (0-100), null if no income data
  */
-function createSavingsChart(canvasId, data, classified) {
+function createSavingsChart(canvasId, data, classified, savingsRates = []) {
     const ctx = document.getElementById(canvasId);
 
     if (window.savingsChart && typeof window.savingsChart.destroy === 'function') {
@@ -29,8 +30,40 @@ function createSavingsChart(canvasId, data, classified) {
         stack: 'savings'
     }));
 
+    // Inline plugin: draw savings rate label above each stacked bar total
+    const savingsRatePlugin = {
+        id: 'savingsRateLabels',
+        afterDatasetsDraw(chart) {
+            const { ctx, scales } = chart;
+            ctx.save();
+            ctx.font = '300 11px sans-serif';
+            ctx.fillStyle = classified.textSubtle;
+            ctx.textAlign = 'center';
+
+            chart.data.labels.forEach((_, colIdx) => {
+                const rate = savingsRates[colIdx];
+                if (rate === null || rate === undefined) return;
+
+                // Sum visible dataset values for this column
+                let total = 0;
+                chart.data.datasets.forEach((ds, dsIdx) => {
+                    if (!chart.getDatasetMeta(dsIdx).hidden) {
+                        total += ds.data[colIdx] || 0;
+                    }
+                });
+
+                const x = scales.x.getPixelForValue(colIdx);
+                const y = scales.y.getPixelForValue(total);
+                ctx.fillText(rate + '%', x, y - 6);
+            });
+
+            ctx.restore();
+        }
+    };
+
     window.savingsChart = new Chart(ctx, {
         type: 'bar',
+        plugins: [savingsRatePlugin],
         data: {
             labels: data.years,
             datasets
@@ -38,6 +71,7 @@ function createSavingsChart(canvasId, data, classified) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            layout: { padding: { top: 24 } },
             interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: {
