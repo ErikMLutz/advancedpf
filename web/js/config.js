@@ -35,7 +35,8 @@ const CONFIG = {
         debt: '/data/debt.csv',
         securities: '/data/securities.csv',
         credit: '/data/credit.csv',
-        manifest: '/data/manifest.csv'
+        manifest: '/data/manifest.csv',
+        income: '/data/income.csv'
     },
 
     // Chart display options

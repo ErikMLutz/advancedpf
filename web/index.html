@@ -35,6 +35,7 @@
     <script src="js/chart-netWorthAllTime.js"></script>
     <script src="js/chart-netWorth12Months.js"></script>
     <script src="js/chart-assetAllocation.js"></script>
+    <script src="js/chart-income.js"></script>
 </head>
 <body>
     <!-- Alpine.js App -->
@@ -672,7 +673,26 @@
                     </div>
                 </div>
 
-                <!-- Future charts go here -->
+                <!-- Cash Flow Section -->
+                <div x-show="!hasError" class="w-full mt-16">
+                    <div class="mb-8">
+                        <h2 class="text-4xl font-light mb-1"
+                            :style="`color: ${theme ? theme.classified.text : textColor};`">
+                            Cash Flow
+                        </h2>
+                    </div>
+
+                    <!-- Income Chart -->
+                    <div class="w-full mb-8">
+                        <h2 class="text-xl font-light mb-4"
+                            :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
+                            income
+                        </h2>
+                        <div style="position: relative; height: 300px; width: 100%;">
+                            <canvas id="incomeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -698,6 +718,7 @@
                 netWorthData: null,
                 netWorth12MonthsData: null,
                 assetAllocationData: null,
+                incomeData: null,
                 dataLoadError: null,
                 themeMapping: {},
                 themeCopied: false,
@@ -881,6 +902,16 @@
                         // Calculate asset allocation
                         this.assetAllocationData = computeAssetAllocation(sources, rawData.manifest);
 
+                        // Process income data (already in year/value format, just sort by year)
+                        // Schema: year, total_income, federal_income_tax, state_income_tax
+                        const sortedIncome = [...rawData.income].sort((a, b) => a.year - b.year);
+                        this.incomeData = {
+                            years: sortedIncome.map(d => String(d.year)),
+                            values: sortedIncome.map(d => d.total_income),
+                            federalTax: sortedIncome.map(d => d.federal_income_tax),
+                            stateTax: sortedIncome.map(d => d.state_income_tax)
+                        };
+
                         this.dataLoadError = null;
 
                     } catch (error) {
@@ -915,6 +946,14 @@
                             createAssetAllocationChart(
                                 'assetAllocationChart',
                                 this.assetAllocationData,
+                                this.theme.classified
+                            );
+                        }
+
+                        if (this.incomeData && this.dataLoadError === null) {
+                            createIncomeChart(
+                                'incomeChart',
+                                this.incomeData,
                                 this.theme.classified
                             );
                         }

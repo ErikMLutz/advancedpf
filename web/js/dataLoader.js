@@ -42,17 +42,18 @@ async function loadCSV(path) {
  */
 async function loadAllData() {
     try {
-        const [cash, property, debt, securities, credit, manifest] = await Promise.all([
+        const [cash, property, debt, securities, credit, manifest, income] = await Promise.all([
             loadCSV(CONFIG.dataPaths.cash),
             loadCSV(CONFIG.dataPaths.property),
             loadCSV(CONFIG.dataPaths.debt),
             loadCSV(CONFIG.dataPaths.securities),
             loadCSV(CONFIG.dataPaths.credit),
-            loadCSV(CONFIG.dataPaths.manifest)
+            loadCSV(CONFIG.dataPaths.manifest),
+            loadCSV(CONFIG.dataPaths.income)
         ]);
 
         // Validate that we got data
-        if (!cash || !property || !debt || !securities || !credit || !manifest) {
+        if (!cash || !property || !debt || !securities || !credit || !manifest || !income) {
             throw new Error('One or more data files is empty');
         }
 
@@ -86,7 +87,8 @@ async function loadAllData() {
             debt,
             securities,
             credit,
-            manifest
+            manifest,
+            income
         };
     } catch (error) {
         throw new Error(`Failed to load data: ${error.message}`);
