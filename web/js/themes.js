@@ -10,10 +10,22 @@ const THEME_KEYS = [
     'blackWhite_light'
 ];
 
-// Minimal placeholder so getTheme()/getAllThemes() work synchronously before initThemes() resolves
-let THEMES = {
-    pacificMist_dark: { name: 'Pacific Mist Dark', palette: {}, mapping: {} }
-};
+let THEMES = {};
+
+// Pre-load the default theme synchronously so getTheme() works before initThemes() resolves.
+// Synchronous XHR is acceptable here — this is a local-only tool served over localhost.
+(function () {
+    try {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', 'themes/pacificMist_dark.json', false);
+        xhr.send();
+        THEMES.pacificMist_dark = xhr.status === 200
+            ? JSON.parse(xhr.responseText)
+            : { name: 'Pacific Mist Dark', palette: {}, mapping: {} };
+    } catch (e) {
+        THEMES.pacificMist_dark = { name: 'Pacific Mist Dark', palette: {}, mapping: {} };
+    }
+}());
 
 /**
  * Load all theme JSON files in parallel and populate THEMES.

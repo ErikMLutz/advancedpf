@@ -1,22 +1,17 @@
 document.addEventListener('alpine:init', () => {
-    Alpine.data('dashboard', () => ({
-        currentScheme: 'pacificMist_dark',
-        backgroundColor: '#46494c',
-        textColor: '#f8f8f8',
-        // Hardcoded pacificMist_dark defaults — overwritten after initThemes() resolves.
-        // Prevents Alpine from throwing on theme.classified.* before async fetch completes.
+    Alpine.data('dashboard', () => {
+        // themes.js pre-loads the default theme synchronously, so getTheme() works here
+        // before the async initThemes() call in init() has resolved.
+        const DEFAULT_SCHEME = 'pacificMist_dark';
+        const _initial = getTheme(DEFAULT_SCHEME);
+        return {
+        currentScheme: DEFAULT_SCHEME,
+        backgroundColor: _initial.classified.background,
+        textColor: _initial.classified.text,
         theme: {
-            name: 'Pacific Mist Dark',
-            colors: [],
-            classified: {
-                background: '#46494c', backgroundAlt: '#4c5c68',
-                text: '#f8f8f8', textSubtle: '#d1cfd2',
-                textDark: '#1d1e1f', textDarkSubtle: '#2e373f',
-                accent: '#22b3d9', accentAlt: '#54c9e8',
-                chart1: '#c6eef8', chart2: '#22b3d9', chart3: '#93a3b0',
-                chart4: '#333233', chart5: '#0f5061',
-                chartWarn: '#dcdde0', chartAlarm: '#787578'
-            }
+            name: _initial.name,
+            colors: _initial.colors,
+            classified: { ..._initial.classified }
         },
         settingsOpen: false,
         verbose: false,
@@ -554,5 +549,6 @@ document.addEventListener('alpine:init', () => {
             this.newColorName = '';
             this.newColorHex = '#808080';
         }
-    }));
+        };
+    });
 });
