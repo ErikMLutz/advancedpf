@@ -422,40 +422,49 @@ function getAccountsWithMetadata(sources, manifest, currentMonthOnly = true) {
 /**
  * Compute savings by year and category (stacked bar chart data)
  * Schema: year, account, amount — multiple rows per year+account are summed.
- * Negative net amounts per year+account are treated as withdrawals and separated out.
+ * Positive and negative rows are split BEFORE aggregation so that a deposit
+ * and a withdrawal for the same account in the same year remain independent.
  * @param {Array} savingsRows - Raw savings CSV rows
  * @param {Array} manifest - Manifest data (already parsed booleans)
  * @returns {{ years: string[], datasets: Array<{category: string, data: number[]}>, withdrawals: number[] }}
  */
 function computeSavingsAllocation(savingsRows, manifest) {
-    // Sum amounts by year+account (handles multiple rows per account per year)
-    const yearAccountTotals = {};
-    savingsRows.forEach(row => {
+    // Split raw rows by sign first — before any summation
+    const positiveRows = savingsRows.filter(row => row.amount > 0);
+    const negativeRows = savingsRows.filter(row => row.amount < 0);
+
+    // Sum positive rows by year+account, then categorize
+    const posTotals = {};
+    positiveRows.forEach(row => {
         const key = `${row.year}|${row.account}`;
-        yearAccountTotals[key] = (yearAccountTotals[key] || 0) + row.amount;
+        posTotals[key] = (posTotals[key] || 0) + row.amount;
     });
 
-    // Categorize each year+account entry using shared categorization logic
-    const allEntries = Object.entries(yearAccountTotals).map(([key, amount]) => {
+    const positiveEntries = Object.entries(posTotals).map(([key, amount]) => {
         const [year, account] = key.split('|');
         const meta = manifest.find(m => m.account === account);
         if (!meta) {
             console.warn(`Account "${account}" in savings.csv not found in manifest`);
             return null;
         }
-        const category = categorizeAccount(meta);
-        return { year, amount, category };
+        return { year, amount, category: categorizeAccount(meta) };
     }).filter(d => d !== null);
 
-    // Separate positive savings from withdrawals (negative net amounts)
-    const positiveEntries = allEntries.filter(d => d.amount > 0);
-    const withdrawalEntries = allEntries.filter(d => d.amount < 0);
+    // Sum negative rows by year only (withdrawals don't need category breakdown)
+    const negTotals = {};
+    negativeRows.forEach(row => {
+        const year = String(row.year);
+        negTotals[year] = (negTotals[year] || 0) + row.amount;
+    });
 
-    // Sorted unique years (across all entries)
-    const years = [...new Set(allEntries.map(d => d.year))].sort();
+    // Sorted unique years across both sides
+    const years = [...new Set([
+        ...positiveEntries.map(d => d.year),
+        ...Object.keys(negTotals)
+    ])].sort();
+
     const categories = [...new Set(positiveEntries.map(d => d.category))].sort();
 
-    // Build one dataset per positive category with a value per year
     const datasets = categories.map(category => ({
         category,
         data: years.map(year =>
@@ -465,12 +474,8 @@ function computeSavingsAllocation(savingsRows, manifest) {
         )
     }));
 
-    // Aggregate withdrawals per year (kept as negative values)
-    const withdrawals = years.map(year =>
-        withdrawalEntries
-            .filter(d => d.year === year)
-            .reduce((sum, d) => sum + d.amount, 0)
-    );
+    // One negative total per year
+    const withdrawals = years.map(year => negTotals[year] || 0);
 
     return { years, datasets, withdrawals };
 }
