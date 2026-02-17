@@ -31,7 +31,7 @@ function createCreditSpendingChart(canvasId, data, classified) {
             datasets: [
                 {
                     type: 'bar',
-                    label: 'Spend',
+                    label: 'spend',
                     data: spendValues,
                     backgroundColor: classified.chart1,
                     borderWidth: 0,

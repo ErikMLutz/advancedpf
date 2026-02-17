@@ -1,17 +1,17 @@
-// Savings Stacked Bar Chart
+// Taxes Stacked Bar Chart
 
 /**
- * Create savings stacked bar chart by category
+ * Create taxes stacked bar chart (federal, state, social security, medicare)
  * @param {string} canvasId - Canvas element ID
- * @param {{ years: string[], datasets: Array<{category: string, data: number[]}> }} data
+ * @param {Object} data - Income data with years and tax breakdown arrays
  * @param {Object} classified - Classified color scheme
- * @param {Array<number|null>} savingsRates - Savings rate per year (0-100), null if no income data
+ * @param {Array<number|null>} effectiveRates - Effective tax rate per year (0-100), null if no income
  */
-function createSavingsChart(canvasId, data, classified, savingsRates = []) {
+function createTaxesChart(canvasId, data, classified, effectiveRates = []) {
     const ctx = document.getElementById(canvasId);
 
-    if (window.savingsChart && typeof window.savingsChart.destroy === 'function') {
-        window.savingsChart.destroy();
+    if (window.taxesChart && typeof window.taxesChart.destroy === 'function') {
+        window.taxesChart.destroy();
     }
 
     const chartColors = [
@@ -22,29 +22,24 @@ function createSavingsChart(canvasId, data, classified, savingsRates = []) {
         classified.chart5
     ];
 
-    const datasets = data.datasets.map((ds, i) => ({
-        label: ds.category,
-        data: ds.data,
+    const taxDatasets = [
+        { label: 'federal income tax', key: 'federalTax' },
+        { label: 'state income tax',   key: 'stateTax' },
+        { label: 'social security',    key: 'socialSecurity' },
+        { label: 'medicare',           key: 'medicare' }
+    ];
+
+    const datasets = taxDatasets.map((ds, i) => ({
+        label: ds.label,
+        data: data[ds.key],
         backgroundColor: chartColors[i % chartColors.length],
         borderWidth: 0,
-        stack: 'savings'
+        stack: 'taxes'
     }));
 
-    // Withdrawals as a separate negative bar below zero (only include if any are non-zero)
-    if (data.withdrawals && data.withdrawals.some(v => v !== 0)) {
-        const withdrawalColor = chartColors[data.datasets.length % chartColors.length];
-        datasets.push({
-            label: 'withdrawals',
-            data: data.withdrawals,
-            backgroundColor: withdrawalColor,
-            borderWidth: 0,
-            stack: 'savings'
-        });
-    }
-
-    // Inline plugin: draw savings rate label above each stacked bar total
-    const savingsRatePlugin = {
-        id: 'savingsRateLabels',
+    // Inline plugin: draw effective tax rate above each stacked bar total
+    const effectiveRatePlugin = {
+        id: 'effectiveRateLabels',
         afterDatasetsDraw(chart) {
             const { ctx, scales } = chart;
             ctx.save();
@@ -53,15 +48,13 @@ function createSavingsChart(canvasId, data, classified, savingsRates = []) {
             ctx.textAlign = 'center';
 
             chart.data.labels.forEach((_, colIdx) => {
-                const rate = savingsRates[colIdx];
+                const rate = effectiveRates[colIdx];
                 if (rate === null || rate === undefined) return;
 
-                // Sum only positive visible dataset values to find top of positive stack
                 let total = 0;
                 chart.data.datasets.forEach((ds, dsIdx) => {
                     if (!chart.getDatasetMeta(dsIdx).hidden) {
-                        const val = ds.data[colIdx] || 0;
-                        if (val > 0) total += val;
+                        total += ds.data[colIdx] || 0;
                     }
                 });
 
@@ -74,9 +67,9 @@ function createSavingsChart(canvasId, data, classified, savingsRates = []) {
         }
     };
 
-    window.savingsChart = new Chart(ctx, {
+    window.taxesChart = new Chart(ctx, {
         type: 'bar',
-        plugins: [savingsRatePlugin],
+        plugins: [effectiveRatePlugin],
         data: {
             labels: data.years,
             datasets

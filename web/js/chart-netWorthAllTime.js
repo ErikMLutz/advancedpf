@@ -21,7 +21,7 @@ function createAllTimeNetWorthChart(canvasId, data, classified, verbose = false,
         data: {
             labels: data.months,
             datasets: [{
-                label: 'Net Worth',
+                label: 'net worth',
                 data: data.values,
                 borderColor: classified.chart1,
                 backgroundColor: 'transparent',

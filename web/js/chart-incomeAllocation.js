@@ -22,10 +22,10 @@ function createIncomeAllocationChart(canvasId, data, classified) {
     ];
 
     const datasets = [
-        { label: 'Taxes',         key: 'taxes' },
-        { label: 'Savings',       key: 'savings' },
-        { label: 'Credit Spend',  key: 'credit' },
-        { label: 'Uncategorized', key: 'uncategorized' }
+        { label: 'taxes',         key: 'taxes' },
+        { label: 'savings',       key: 'savings' },
+        { label: 'credit spend',  key: 'credit' },
+        { label: 'uncategorized', key: 'uncategorized' }
     ].map((ds, i) => ({
         label: ds.label,
         data: data[ds.key],

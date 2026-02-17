@@ -19,7 +19,7 @@ function createIncomeChart(canvasId, data, classified) {
         data: {
             labels: data.years,
             datasets: [{
-                label: 'Total Income',
+                label: 'total income',
                 data: data.values,
                 backgroundColor: classified.chart1,
                 borderColor: classified.chart1,
