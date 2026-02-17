@@ -1,0 +1,58 @@
+{
+    "name": "Black & White Light",
+    "palette": {
+        "black": {
+            "DEFAULT": "#000000",
+            "100": "#000000",
+            "200": "#000000",
+            "300": "#000000",
+            "400": "#000000",
+            "500": "#000000",
+            "600": "#000000",
+            "700": "#000000",
+            "800": "#000000",
+            "900": "#000000"
+        },
+        "white": {
+            "DEFAULT": "#ffffff",
+            "100": "#ffffff",
+            "200": "#ffffff",
+            "300": "#ffffff",
+            "400": "#ffffff",
+            "500": "#ffffff",
+            "600": "#ffffff",
+            "700": "#ffffff",
+            "800": "#ffffff",
+            "900": "#ffffff"
+        },
+        "grey": {
+            "DEFAULT": "#808080",
+            "100": "#1a1a1a",
+            "200": "#333333",
+            "300": "#4d4d4d",
+            "400": "#666666",
+            "500": "#808080",
+            "600": "#999999",
+            "700": "#b3b3b3",
+            "800": "#cccccc",
+            "900": "#e6e6e6"
+        }
+    },
+    "mapping": {
+        "background": "white.500",
+        "backgroundAlt": "grey.800",
+        "text": "black.500",
+        "textSubtle": "grey.300",
+        "textDark": "black.500",
+        "textDarkSubtle": "grey.300",
+        "accent": "black.500",
+        "accentAlt": "grey.400",
+        "chart1": "black.500",
+        "chart2": "grey.300",
+        "chart3": "grey.500",
+        "chart4": "grey.600",
+        "chart5": "grey.700",
+        "chartWarn": "grey.400",
+        "chartAlarm": "grey.200"
+    }
+}

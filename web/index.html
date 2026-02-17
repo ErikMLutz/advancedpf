@@ -385,13 +385,12 @@
                                              window._previewChartInstance = chart;
                                          },
 
-                                         // Get color from current theme mapping
+                                         // Get color from current pending palette and mapping
                                          getPreviewColor(purpose) {
                                              const path = this.themeMapping[purpose];
                                              if (!path) return '#ff00ff';
                                              const [family, shade] = path.split('.');
-                                             const themeObj = THEMES[this.currentScheme];
-                                             return themeObj?.palette[family]?.[shade] || '#ff00ff';
+                                             return this.themePalette[family]?.[shade] || '#ff00ff';
                                          },
 
                                          // Update preview colors from theme mapping
@@ -577,6 +576,7 @@
                                             <th class="font-light py-2 px-1 opacity-70">700</th>
                                             <th class="font-light py-2 px-1 opacity-70">800</th>
                                             <th class="font-light py-2 px-1 opacity-70">900</th>
+                                            <th class="font-light py-2 px-1 opacity-70 w-8"></th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -592,10 +592,63 @@
                                                 <td class="py-2 px-1 text-center"><div :style="`background-color: ${colorFamily['700']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6 inline-block"></div></td>
                                                 <td class="py-2 px-1 text-center"><div :style="`background-color: ${colorFamily['800']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6 inline-block"></div></td>
                                                 <td class="py-2 px-1 text-center"><div :style="`background-color: ${colorFamily['900']}; border: 1px solid ${theme.classified.backgroundAlt};`" class="w-6 h-6 inline-block"></div></td>
+                                                <td class="py-2 px-1 text-center">
+                                                    <button @click="deletePaletteColor(familyName)"
+                                                            :title="`delete ${familyName}`"
+                                                            class="opacity-40 hover:opacity-80 transition-opacity">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                                        </svg>
+                                                    </button>
+                                                </td>
                                             </tr>
                                         </template>
                                     </tbody>
                                 </table>
+                            </div>
+
+                            <!-- Add Color -->
+                            <div class="mt-4 pt-4 border-t"
+                                 :style="`border-color: ${theme.classified.backgroundAlt};`">
+                                <div class="flex items-start gap-3 flex-wrap">
+                                    <!-- Name input -->
+                                    <div class="flex flex-col gap-1">
+                                        <input type="text"
+                                               x-model="newColorName"
+                                               placeholder="color_name"
+                                               :style="`background: transparent; border-color: ${theme.classified.backgroundAlt}; color: ${theme.classified.text};`"
+                                               class="px-3 py-1.5 text-xs border font-light w-36 outline-none"
+                                               @keydown.enter="addPaletteColor()">
+                                        <span x-show="newColorNameError"
+                                              x-text="newColorNameError"
+                                              class="text-xs opacity-60"
+                                              :style="`color: ${theme.classified.chartAlarm};`"></span>
+                                    </div>
+
+                                    <!-- Color picker (500 shade) -->
+                                    <input type="color"
+                                           x-model="newColorHex"
+                                           class="w-9 h-9 cursor-pointer border-0 bg-transparent p-0"
+                                           style="padding: 1px;">
+
+                                    <!-- Generated shade preview -->
+                                    <div class="flex items-center gap-0.5 self-start mt-1">
+                                        <template x-for="shade in ['100','200','300','400','500','600','700','800','900']" :key="shade">
+                                            <div :style="`background-color: ${generateColorShades(newColorHex)[shade]}; border: 1px solid ${theme.classified.backgroundAlt};`"
+                                                 class="w-5 h-5"></div>
+                                        </template>
+                                    </div>
+
+                                    <!-- Add button -->
+                                    <button @click="addPaletteColor()"
+                                            :style="`border-color: ${theme.classified.backgroundAlt};`"
+                                            class="px-3 py-1.5 text-xs font-light border hover:opacity-70 transition-opacity flex items-center gap-1.5 self-start">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                        </svg>
+                                        add
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -779,8 +832,21 @@
             return {
                 currentScheme: 'pacificMist_dark',
                 backgroundColor: '#46494c',
-                textColor: '#ffffff',
-                theme: null,
+                textColor: '#f8f8f8',
+                // Hardcoded pacificMist_dark defaults — overwritten after initThemes() resolves.
+                // Prevents Alpine from throwing on theme.classified.* before async fetch completes.
+                theme: {
+                    name: 'Pacific Mist Dark',
+                    classified: {
+                        background: '#46494c', backgroundAlt: '#4c5c68',
+                        text: '#f8f8f8', textSubtle: '#d1cfd2',
+                        textDark: '#1d1e1f', textDarkSubtle: '#2e373f',
+                        accent: '#22b3d9', accentAlt: '#54c9e8',
+                        chart1: '#c6eef8', chart2: '#22b3d9', chart3: '#93a3b0',
+                        chart4: '#333233', chart5: '#0f5061',
+                        chartWarn: '#dcdde0', chartAlarm: '#787578'
+                    }
+                },
                 settingsOpen: false,
                 verbose: false,
                 loading: true,
@@ -794,6 +860,10 @@
                 savingsData: null,
                 dataLoadError: null,
                 themeMapping: {},
+                themePalette: {},
+                newColorName: '',
+                newColorHex: '#808080',
+                newColorNameError: '',
                 themeCopied: false,
                 themeApplied: false,
 
@@ -829,6 +899,7 @@
                     const minLoadTime = 1500;
                     const loadStartTime = Date.now();
 
+                    await initThemes();
                     this.loadTheme();
                     await this.loadData();
                     this.renderCharts();
@@ -874,9 +945,13 @@
                     this.backgroundColor = this.theme.classified.background;
                     this.textColor = this.theme.classified.text;
 
-                    // Initialize theme mapping for editing
+                    // Initialize theme mapping and palette for editing
                     const themeObj = THEMES[this.currentScheme];
                     this.themeMapping = { ...themeObj.mapping };
+                    this.themePalette = JSON.parse(JSON.stringify(themeObj.palette));
+                    this.newColorName = '';
+                    this.newColorHex = '#808080';
+                    this.newColorNameError = '';
                 },
 
                 async loadData() {
@@ -1150,15 +1225,17 @@
                 },
 
                 applyThemeChanges() {
-                    // Get current theme and update its classified colors with modified mapping
-                    const themeObj = THEMES[this.currentScheme];
-                    if (!themeObj) return;
+                    if (!THEMES[this.currentScheme]) return;
 
-                    // Rebuild classified colors from the modified themeMapping
+                    // Commit pending palette and mapping back to THEMES (in-memory)
+                    THEMES[this.currentScheme].palette = JSON.parse(JSON.stringify(this.themePalette));
+                    THEMES[this.currentScheme].mapping = { ...this.themeMapping };
+
+                    // Rebuild classified colors from the updated palette and mapping
                     const classified = {};
                     for (const [purpose, path] of Object.entries(this.themeMapping)) {
                         const [colorFamily, shade] = path.split('.');
-                        classified[purpose] = themeObj.palette[colorFamily]?.[shade] || '#ff00ff';
+                        classified[purpose] = this.themePalette[colorFamily]?.[shade] || '#ff00ff';
                     }
 
                     // Update theme with new classified colors
@@ -1177,12 +1254,15 @@
                 },
 
                 getAllThemes() {
+                    // Read this.theme to create a reactive dependency.
+                    // When loadTheme() updates this.theme after initThemes() resolves,
+                    // Alpine will re-run this expression and pick up the full THEMES data.
+                    void this.theme;
                     return getAllThemes();
                 },
 
                 getThemePalette() {
-                    const themeObj = THEMES[this.currentScheme];
-                    return themeObj ? themeObj.palette : {};
+                    return this.themePalette;
                 },
 
                 formatColorName(name) {
@@ -1208,8 +1288,7 @@
                     const path = this.themeMapping[purpose];
                     if (!path) return '#ff00ff';
                     const [family, shade] = path.split('.');
-                    const themeObj = THEMES[this.currentScheme];
-                    return themeObj?.palette[family]?.[shade] || '#ff00ff';
+                    return this.themePalette[family]?.[shade] || '#ff00ff';
                 },
 
                 updateMapping(purpose, family, shade) {
@@ -1222,13 +1301,12 @@
                     const chart = window._previewChartInstance;
                     if (!chart) return;
 
-                    // Get colors from current theme mapping
-                    const themeObj = THEMES[this.currentScheme];
+                    // Get colors from current pending palette and mapping
                     const getColor = (purpose) => {
                         const path = this.themeMapping[purpose];
                         if (!path) return '#ff00ff';
                         const [family, shade] = path.split('.');
-                        return themeObj?.palette[family]?.[shade] || '#ff00ff';
+                        return this.themePalette[family]?.[shade] || '#ff00ff';
                     };
 
                     // Update chart dataset colors (bars and lines)
@@ -1270,17 +1348,14 @@
                 },
 
                 async copyMappingToClipboard() {
-                    // Format mapping with proper indentation
-                    let output = '        mapping: {\n';
-                    const entries = Object.entries(this.themeMapping);
-                    entries.forEach(([purpose, path], index) => {
-                        const isLast = index === entries.length - 1;
-                        output += `            ${purpose}: '${path}'${isLast ? '' : ','}\n`;
-                    });
-                    output += '        }';
+                    const themeJson = JSON.stringify({
+                        name: this.theme.name,
+                        palette: this.themePalette,
+                        mapping: this.themeMapping
+                    }, null, 4);
 
                     try {
-                        await navigator.clipboard.writeText(output);
+                        await navigator.clipboard.writeText(themeJson);
                         this.themeCopied = true;
                         setTimeout(() => {
                             this.themeCopied = false;
@@ -1288,6 +1363,45 @@
                     } catch (err) {
                         console.error('Failed to copy:', err);
                     }
+                },
+
+                deletePaletteColor(familyName) {
+                    const families = Object.keys(this.themePalette);
+                    if (families.length <= 1) return; // must keep at least one color
+
+                    // Determine fallback: first remaining family after deletion
+                    const remaining = families.filter(f => f !== familyName);
+                    const fallback = `${remaining[0]}.100`;
+
+                    // Remap any mappings pointing to the deleted family
+                    for (const purpose of Object.keys(this.themeMapping)) {
+                        if (this.themeMapping[purpose].startsWith(familyName + '.')) {
+                            this.themeMapping[purpose] = fallback;
+                        }
+                    }
+
+                    // Remove from palette (Alpine reactivity requires reassignment)
+                    const updated = { ...this.themePalette };
+                    delete updated[familyName];
+                    this.themePalette = updated;
+                },
+
+                addPaletteColor() {
+                    const name = this.newColorName.trim();
+                    if (!/^[a-z][a-z0-9]*(_[a-z0-9]+)*$/.test(name)) {
+                        this.newColorNameError = 'must be snake_case (e.g. my_color)';
+                        return;
+                    }
+                    if (this.themePalette[name]) {
+                        this.newColorNameError = 'color name already exists';
+                        return;
+                    }
+                    this.newColorNameError = '';
+
+                    const shades = generateColorShades(this.newColorHex);
+                    this.themePalette = { ...this.themePalette, [name]: shades };
+                    this.newColorName = '';
+                    this.newColorHex = '#808080';
                 }
             }
         }

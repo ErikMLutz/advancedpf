@@ -1,0 +1,82 @@
+{
+    "name": "Pacific Mist Light",
+    "palette": {
+        "iron_grey": {
+            "DEFAULT": "#46494c",
+            "100": "#0e0f10",
+            "200": "#1d1e1f",
+            "300": "#2b2d2f",
+            "400": "#393c3e",
+            "500": "#46494c",
+            "600": "#6b6f73",
+            "700": "#91959a",
+            "800": "#b8bbc0",
+            "900": "#dcdde0"
+        },
+        "blue_slate": {
+            "DEFAULT": "#4c5c68",
+            "100": "#0f1215",
+            "200": "#1e252a",
+            "300": "#2e373f",
+            "400": "#3d4a54",
+            "500": "#4c5c68",
+            "600": "#6a7e8f",
+            "700": "#93a3b0",
+            "800": "#bcc8d1",
+            "900": "#dee4e8"
+        },
+        "pacific_cyan": {
+            "DEFAULT": "#1985a1",
+            "100": "#051b20",
+            "200": "#0a3541",
+            "300": "#0f5061",
+            "400": "#146a82",
+            "500": "#1985a1",
+            "600": "#22b3d9",
+            "700": "#54c9e8",
+            "800": "#8ddcf0",
+            "900": "#c6eef8"
+        },
+        "pale_slate": {
+            "DEFAULT": "#c5c3c6",
+            "100": "#282728",
+            "200": "#504e50",
+            "300": "#787578",
+            "400": "#9f9ca1",
+            "500": "#c5c3c6",
+            "600": "#d1cfd2",
+            "700": "#dcdade",
+            "800": "#e8e7e9",
+            "900": "#f3f3f4"
+        },
+        "alabaster_grey": {
+            "DEFAULT": "#dcdcdd",
+            "100": "#333233",
+            "200": "#666466",
+            "300": "#999699",
+            "400": "#bbbbbd",
+            "500": "#dcdcdd",
+            "600": "#e3e3e4",
+            "700": "#eaeaea",
+            "800": "#f1f1f1",
+            "900": "#f8f8f8"
+        }
+    },
+    "mapping": {
+        "background": "alabaster_grey.900",
+        "backgroundAlt": "pale_slate.700",
+        "text": "iron_grey.200",
+        "textSubtle": "blue_slate.400",
+        "textDark": "iron_grey.200",
+        "textDarkSubtle": "blue_slate.300",
+        "accent": "pacific_cyan.600",
+        "accentAlt": "pacific_cyan.500",
+        "chart1": "pacific_cyan.600",
+        "chart2": "blue_slate.500",
+        "chart3": "iron_grey.500",
+        "chart4": "pale_slate.400",
+        "chart5": "pacific_cyan.500",
+        "chartWarn": "iron_grey.600",
+        "chartAlarm": "pale_slate.200"
+    }
+}
