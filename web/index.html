@@ -38,6 +38,7 @@
     <script src="js/chart-income.js"></script>
     <script src="js/chart-creditSpending.js"></script>
     <script src="js/chart-savings.js"></script>
+    <script src="js/chart-taxes.js"></script>
 </head>
 <body>
     <!-- Alpine.js App -->
@@ -730,6 +731,26 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Taxes Section -->
+                <div x-show="!hasError" class="w-full mt-16">
+                    <div class="mb-8">
+                        <h2 class="text-4xl font-light mb-1"
+                            :style="`color: ${theme ? theme.classified.text : textColor};`">
+                            Taxes
+                        </h2>
+                    </div>
+
+                    <div class="w-full mb-8">
+                        <h2 class="text-xl font-light mb-4"
+                            :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
+                            total
+                        </h2>
+                        <div style="position: relative; height: 350px; width: 100%;">
+                            <canvas id="taxesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1010,6 +1031,25 @@
                                 'creditSpendingChart',
                                 this.creditSpendingData,
                                 this.theme.classified
+                            );
+                        }
+
+                        if (this.incomeData && this.dataLoadError === null) {
+                            const effectiveRates = this.incomeData.years.map((_, i) => {
+                                const income = this.incomeData.values[i];
+                                if (!income) return null;
+                                const totalTax = (this.incomeData.federalTax[i] || 0)
+                                    + (this.incomeData.stateTax[i] || 0)
+                                    + (this.incomeData.socialSecurity[i] || 0)
+                                    + (this.incomeData.medicare[i] || 0);
+                                return Math.round(totalTax / income * 100);
+                            });
+
+                            createTaxesChart(
+                                'taxesChart',
+                                this.incomeData,
+                                this.theme.classified,
+                                effectiveRates
                             );
                         }
 
