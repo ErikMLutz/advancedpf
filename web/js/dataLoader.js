@@ -66,12 +66,12 @@ async function loadManifestYAML(path) {
 
     return Object.entries(parsed.accounts).map(([account, fields]) => ({
         account,
+        ...fields,
         type: fields.type ?? null,
         retirement: fields.retirement ?? false,
         debt_applies_to: fields.debt_applies_to ?? null,
         primary_residence_since: normalizeDateField(fields.primary_residence_since),
         primary_residence_until: normalizeDateField(fields.primary_residence_until),
-        ...fields,
     }));
 }
 
