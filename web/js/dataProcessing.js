@@ -47,6 +47,30 @@ function formatMonth(date) {
 }
 
 /**
+ * Helper: Check if an account was a primary residence for a given month.
+ * Uses manifest's primary_residence_since / primary_residence_until (YYYY-MM-DD strings).
+ * Comparison is at month granularity (YYYY-MM), inclusive on both ends.
+ * Falls back to current month when monthStr is undefined (for current-state charts).
+ * @param {Object} meta - Manifest row
+ * @param {string|undefined} monthStr - Month in YYYY-MM format
+ * @returns {boolean}
+ */
+function isPrimaryResidence(meta, monthStr) {
+    const since = meta.primary_residence_since;
+    const until = meta.primary_residence_until;
+    if (!since && !until) return false;
+
+    const month = monthStr || formatMonth(new Date());
+    const sinceMonth = since ? since.substring(0, 7) : null;
+    const untilMonth = until ? until.substring(0, 7) : null;
+
+    if (sinceMonth && untilMonth) return month >= sinceMonth && month <= untilMonth;
+    if (sinceMonth) return month >= sinceMonth;
+    if (untilMonth) return month <= untilMonth;
+    return false;
+}
+
+/**
  * Helper: Forward fill missing values
  * @param {Array} data - Array of {month, value} objects
  * @returns {Array} Data with forward-filled values
@@ -367,7 +391,7 @@ function computeValueOverLast12Months(sources) {
 /**
  * Categorize an account based on its metadata
  * Shared categorization logic used across charts and tooltips
- * @param {Object} account - Account object with type, retirement, primary_residence
+ * @param {Object} account - Account object with type, retirement, primary_residence (boolean, already date-resolved)
  * @returns {string} Category name
  */
 function categorizeAccount(account) {
@@ -425,8 +449,8 @@ function getAccountsWithMetadata(sources, manifest, currentMonthOnly = true, mon
             value: row.value,
             month: row.month,
             type: meta.type || row.sourceType,
-            retirement: meta.retirement === true || meta.retirement === 'true' || meta.retirement === 'TRUE',
-            primary_residence: meta.primary_residence === true || meta.primary_residence === 'true' || meta.primary_residence === 'TRUE',
+            retirement: meta.retirement === true,
+            primary_residence: isPrimaryResidence(meta, row.month),
             debt_applies_to: meta.debt_applies_to || ''
         };
     }).filter(row => row !== null);

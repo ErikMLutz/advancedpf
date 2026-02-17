@@ -49,12 +49,28 @@ async function loadManifestYAML(path) {
     }
     const text = await response.text();
     const parsed = jsyaml.load(text);
+
+    // js-yaml auto-parses unquoted YYYY-MM-DD values as UTC Date objects.
+    // Convert them back to YYYY-MM-DD strings using UTC methods to avoid
+    // timezone-shift bugs (e.g. 2025-05-01 UTC → Apr 30 in US/Pacific).
+    const normalizeDateField = (val) => {
+        if (!val) return undefined;
+        if (val instanceof Date) {
+            const y = val.getUTCFullYear();
+            const m = String(val.getUTCMonth() + 1).padStart(2, '0');
+            const d = String(val.getUTCDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+        return String(val);
+    };
+
     return Object.entries(parsed.accounts).map(([account, fields]) => ({
         account,
         type: fields.type ?? null,
         retirement: fields.retirement ?? false,
         debt_applies_to: fields.debt_applies_to ?? null,
-        primary_residence: fields.primary_residence ?? false,
+        primary_residence_since: normalizeDateField(fields.primary_residence_since),
+        primary_residence_until: normalizeDateField(fields.primary_residence_until),
         ...fields,
     }));
 }
