@@ -32,11 +32,10 @@ function createSavingsChart(canvasId, data, classified, savingsRates = []) {
 
     // Withdrawals as a separate negative bar below zero (only include if any are non-zero)
     if (data.withdrawals && data.withdrawals.some(v => v !== 0)) {
-        const withdrawalColor = chartColors[data.datasets.length % chartColors.length];
         datasets.push({
             label: 'withdrawals',
             data: data.withdrawals,
-            backgroundColor: withdrawalColor,
+            backgroundColor: classified.chartWarn,
             borderWidth: 0,
             stack: 'savings'
         });

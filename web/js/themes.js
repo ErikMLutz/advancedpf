@@ -141,7 +141,9 @@ const THEMES = {
             chart2: 'pearl_aqua.500',
             chart3: 'golden_orange.500',
             chart4: 'burnt_caramel.600',
-            chart5: 'rusty_spice.500'
+            chart5: 'rusty_spice.500',
+            chartWarn: 'golden_orange.400',
+            chartAlarm: 'oxidized_iron.600'
         }
     },
 
@@ -222,7 +224,9 @@ const THEMES = {
             chart2: 'pacific_cyan.600',
             chart3: 'blue_slate.700',
             chart4: 'alabaster_grey.300',
-            chart5: 'pacific_cyan.300'
+            chart5: 'pacific_cyan.300',
+            chartWarn: 'iron_grey.900',
+            chartAlarm: 'pale_slate.300'
         }
     },
 
@@ -303,7 +307,9 @@ const THEMES = {
             chart2: 'blue_slate.500',
             chart3: 'iron_grey.500',
             chart4: 'pale_slate.400',
-            chart5: 'pacific_cyan.500'
+            chart5: 'pacific_cyan.500',
+            chartWarn: 'iron_grey.600',
+            chartAlarm: 'pale_slate.200'
         }
     },
 
@@ -360,7 +366,9 @@ const THEMES = {
             chart2: 'grey.700',
             chart3: 'grey.500',
             chart4: 'grey.400',
-            chart5: 'grey.300'
+            chart5: 'grey.300',
+            chartWarn: 'grey.600',
+            chartAlarm: 'grey.800'
         }
     },
 
@@ -417,7 +425,9 @@ const THEMES = {
             chart2: 'grey.300',
             chart3: 'grey.500',
             chart4: 'grey.600',
-            chart5: 'grey.700'
+            chart5: 'grey.700',
+            chartWarn: 'grey.400',
+            chartAlarm: 'grey.200'
         }
     }
 };
