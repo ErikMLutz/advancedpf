@@ -123,7 +123,9 @@ class SnapshotData {
         const grouped = groupBy(this.data, row => `${row.month}|${row.account}`);
         const monthAccountValues = Array.from(grouped.entries()).map(([key, rows]) => {
             const [month, account] = key.split('|');
-            return { month, account, value: rows[0].value };
+            // Sort descending by full date so the latest snapshot in the month wins
+            const sorted = [...rows].sort((a, b) => b.date - a.date);
+            return { month, account, value: sorted[0].value };
         });
 
         // Group by month only and sum values
@@ -177,23 +179,23 @@ class SnapshotData {
 
         // For each account, forward fill to current month
         const result = accounts.map(account => {
-            // Get all data for this account, sorted by month
+            // Sort descending by full date so latest snapshot wins within a month
             const accountData = this.data
                 .filter(row => row.account === account)
-                .sort((a, b) => a.month.localeCompare(b.month));
+                .sort((a, b) => b.date - a.date);
 
             if (accountData.length === 0) {
                 return { account, value: 0 };
             }
 
-            // Find value for current month or most recent
+            // Find value for current month — first match after descending sort is the latest
             const currentMonthData = accountData.find(row => row.month === currentMonth);
             if (currentMonthData) {
                 return { account, value: currentMonthData.value };
             }
 
-            // Forward fill from most recent month
-            const mostRecent = accountData[accountData.length - 1];
+            // Forward fill from most recent month — first entry is the latest after descending sort
+            const mostRecent = accountData[0];
             if (mostRecent.month <= currentMonth) {
                 return { account, value: mostRecent.value };
             }
@@ -219,9 +221,10 @@ class SnapshotData {
         const result = [];
 
         accounts.forEach(account => {
+            // Sort descending by full date so latest snapshot wins within a month
             const accountRows = this.data
                 .filter(row => row.account === account)
-                .sort((a, b) => a.month.localeCompare(b.month));
+                .sort((a, b) => b.date - a.date);
 
             let lastValue = 0;
             skeleton.forEach(month => {
@@ -596,8 +599,8 @@ function computeAccountsTable(sources, manifest) {
         }
     });
 
-    nonRetirement.sort((a, b) => b.value - a.value);
-    retirement.sort((a, b) => b.value - a.value);
+    nonRetirement.sort((a, b) => b.netValue - a.netValue);
+    retirement.sort((a, b) => b.netValue - a.netValue);
 
     // Flatten each group: interleave parent rows with their debt sub-rows
     const flatten = (rows) => {
@@ -612,6 +615,44 @@ function computeAccountsTable(sources, manifest) {
     };
 
     return { nonRetirement: flatten(nonRetirement), retirement: flatten(retirement) };
+}
+
+/**
+ * Compute retirement account balances grouped by tax treatment
+ * @param {Array} sources - Array of SnapshotData sources (cash, property, debt, securities)
+ * @param {Array} manifest - Manifest data with account metadata
+ * @returns {Array} Array of {treatment, value, proportion} sorted by value descending
+ */
+function computeRetirementTaxAllocation(sources, manifest) {
+    // Get current-month values per account
+    const accountValues = {};
+    sources.forEach(source => {
+        source.valueByAccount().forEach(row => {
+            accountValues[row.account] = (accountValues[row.account] || 0) + row.value;
+        });
+    });
+
+    // Filter to retirement accounts only (exclude debt)
+    const retirementAccounts = manifest.filter(meta => meta.retirement === true && meta.type !== 'debt');
+
+    // Group by tax_treatment (default: 'taxable')
+    const byTreatment = {};
+    retirementAccounts.forEach(meta => {
+        const value = accountValues[meta.account] || 0;
+        if (value === 0) return;
+        const treatment = meta.tax_treatment || 'taxable';
+        byTreatment[treatment] = (byTreatment[treatment] || 0) + value;
+    });
+
+    const total = Object.values(byTreatment).reduce((sum, v) => sum + v, 0);
+
+    return Object.entries(byTreatment)
+        .map(([treatment, value]) => ({
+            treatment,
+            value,
+            proportion: total > 0 ? value / total : 0
+        }))
+        .sort((a, b) => b.value - a.value);
 }
 
 /**

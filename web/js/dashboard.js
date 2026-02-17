@@ -28,6 +28,7 @@ document.addEventListener('alpine:init', () => {
         creditSpendingData: null,
         creditByYearData: null,
         savingsData: null,
+        retirementTaxData: null,
         accountsData: null,
         dataLoadError: null,
         themeMapping: {},
@@ -247,6 +248,9 @@ document.addEventListener('alpine:init', () => {
                 // Savings by year and category
                 this.savingsData = computeSavingsAllocation(rawData.savings, rawData.manifest);
 
+                // Retirement accounts by tax treatment
+                this.retirementTaxData = computeRetirementTaxAllocation(sources, rawData.manifest);
+
                 // Accounts table (current balances, split by retirement)
                 this.accountsData = computeAccountsTable(sources, rawData.manifest);
 
@@ -359,6 +363,14 @@ document.addEventListener('alpine:init', () => {
                         this.incomeData,
                         this.theme.classified,
                         effectiveRates
+                    );
+                }
+
+                if (this.retirementTaxData && this.retirementTaxData.length > 0 && this.dataLoadError === null) {
+                    createRetirementTaxAllocationChart(
+                        'retirementTaxAllocationChart',
+                        this.retirementTaxData,
+                        this.theme.classified
                     );
                 }
 

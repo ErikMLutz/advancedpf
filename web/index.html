@@ -43,6 +43,7 @@
     <script src="js/chart-savings.js"></script>
     <script src="js/chart-taxes.js"></script>
     <script src="js/chart-incomeAllocation.js"></script>
+    <script src="js/chart-retirementTaxAllocation.js"></script>
 
     <!-- Dashboard component -->
     <script src="js/dashboard.js"></script>
@@ -820,6 +821,29 @@
                         <div style="position: relative; height: 350px; width: 100%;">
                             <canvas id="taxesChart"></canvas>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Retirement Section -->
+                <div x-show="!hasError" class="w-full mt-16">
+                    <div class="mb-8">
+                        <h2 class="text-4xl font-light mb-1"
+                            :style="`color: ${theme ? theme.classified.text : textColor};`">
+                            Retirement
+                        </h2>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-8 mb-8">
+                        <div>
+                            <h2 class="text-xl font-light mb-4"
+                                :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
+                                tax treatment
+                            </h2>
+                            <div style="position: relative; height: 350px; width: 100%; max-width: 450px; margin: 0 auto;">
+                                <canvas id="retirementTaxAllocationChart"></canvas>
+                            </div>
+                        </div>
+                        <div></div>
                     </div>
                 </div>
 
