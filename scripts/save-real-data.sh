@@ -34,7 +34,7 @@ TMP_DIR=$(mktemp -d)
 TMP_ZIP="${TMP_DIR}/${ZIP_FILENAME}"
 
 cd "$DATA_DIR"
-zip -r "$TMP_ZIP" *.csv
+zip -r "$TMP_ZIP" *
 
 cd - > /dev/null
 
