@@ -1016,7 +1016,7 @@
 
                         // Compute categorized breakdowns for verbose mode
                         // Get all account-level data with categorization
-                        const accountsWithMetadata = getAccountsWithMetadata(sources, rawData.manifest, false);
+                        const accountsWithMetadata = getAccountsWithMetadata(sources, rawData.manifest, false, monthsDiff);
 
                         // Group by month and category
                         const categoryBreakdowns = {};

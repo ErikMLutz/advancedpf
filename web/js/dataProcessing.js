@@ -184,6 +184,35 @@ class SnapshotData {
     }
 
     /**
+     * Get value by account and month with forward-filling per account.
+     * Mirrors valueByMonth but preserves account identity instead of summing.
+     * @param {number} months - Number of months (same skeleton as valueByMonth)
+     * @returns {Array} Array of {month, account, value} objects
+     */
+    valueByAccountByMonth(months) {
+        const skeleton = createMonthSkeleton(months);
+        const accounts = [...new Set(this.data.map(row => row.account))];
+        const result = [];
+
+        accounts.forEach(account => {
+            const accountRows = this.data
+                .filter(row => row.account === account)
+                .sort((a, b) => a.month.localeCompare(b.month));
+
+            let lastValue = 0;
+            skeleton.forEach(month => {
+                const match = accountRows.find(row => row.month === month);
+                if (match) {
+                    lastValue = match.value;
+                }
+                result.push({ month, account, value: lastValue });
+            });
+        });
+
+        return result;
+    }
+
+    /**
      * Get change by month
      * @param {number} months - Number of months
      * @returns {Array} Array of {month, change} objects
@@ -356,14 +385,22 @@ function categorizeAccount(account) {
  * @param {Array} sources - Array of SnapshotData sources
  * @param {Object} manifest - Manifest data with account metadata
  * @param {boolean} currentMonthOnly - If true, use valueByAccount (current month), else use all data
+ * @param {number|null} months - When provided (and currentMonthOnly=false), use forward-filled per-account data
  * @returns {Array} Array of accounts with metadata and debt applied
  */
-function getAccountsWithMetadata(sources, manifest, currentMonthOnly = true) {
+function getAccountsWithMetadata(sources, manifest, currentMonthOnly = true, months = null) {
     // Get values by account from all sources
     const accountValues = [];
 
     sources.forEach(source => {
-        const byAccount = currentMonthOnly ? source.valueByAccount() : source.data;
+        let byAccount;
+        if (currentMonthOnly) {
+            byAccount = source.valueByAccount();
+        } else if (months !== null) {
+            byAccount = source.valueByAccountByMonth(months);
+        } else {
+            byAccount = source.data;
+        }
         byAccount.forEach(row => {
             accountValues.push({
                 account: row.account,

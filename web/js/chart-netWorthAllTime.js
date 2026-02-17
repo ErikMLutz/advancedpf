@@ -76,6 +76,7 @@ function createAllTimeNetWorthChart(canvasId, data, classified, verbose = false,
 
                             // Add each category dynamically
                             Object.entries(breakdown)
+                                .filter(([, categoryValue]) => categoryValue !== 0)
                                 .sort((a, b) => b[1] - a[1]) // Sort by value descending
                                 .forEach(([category, categoryValue]) => {
                                     const formattedCategory = category.charAt(0).toUpperCase() + category.slice(1);
