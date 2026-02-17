@@ -421,10 +421,11 @@ function getAccountsWithMetadata(sources, manifest, currentMonthOnly = true) {
 
 /**
  * Compute savings by year and category (stacked bar chart data)
- * Schema: year, account, amount — multiple rows per year+account are summed
+ * Schema: year, account, amount — multiple rows per year+account are summed.
+ * Negative net amounts per year+account are treated as withdrawals and separated out.
  * @param {Array} savingsRows - Raw savings CSV rows
  * @param {Array} manifest - Manifest data (already parsed booleans)
- * @returns {{ years: string[], datasets: Array<{category: string, data: number[]}> }}
+ * @returns {{ years: string[], datasets: Array<{category: string, data: number[]}>, withdrawals: number[] }}
  */
 function computeSavingsAllocation(savingsRows, manifest) {
     // Sum amounts by year+account (handles multiple rows per account per year)
@@ -435,7 +436,7 @@ function computeSavingsAllocation(savingsRows, manifest) {
     });
 
     // Categorize each year+account entry using shared categorization logic
-    const categorized = Object.entries(yearAccountTotals).map(([key, amount]) => {
+    const allEntries = Object.entries(yearAccountTotals).map(([key, amount]) => {
         const [year, account] = key.split('|');
         const meta = manifest.find(m => m.account === account);
         if (!meta) {
@@ -446,21 +447,32 @@ function computeSavingsAllocation(savingsRows, manifest) {
         return { year, amount, category };
     }).filter(d => d !== null);
 
-    // Sorted unique years and categories
-    const years = [...new Set(categorized.map(d => d.year))].sort();
-    const categories = [...new Set(categorized.map(d => d.category))].sort();
+    // Separate positive savings from withdrawals (negative net amounts)
+    const positiveEntries = allEntries.filter(d => d.amount > 0);
+    const withdrawalEntries = allEntries.filter(d => d.amount < 0);
 
-    // Build one dataset per category with a value per year
+    // Sorted unique years (across all entries)
+    const years = [...new Set(allEntries.map(d => d.year))].sort();
+    const categories = [...new Set(positiveEntries.map(d => d.category))].sort();
+
+    // Build one dataset per positive category with a value per year
     const datasets = categories.map(category => ({
         category,
         data: years.map(year =>
-            categorized
+            positiveEntries
                 .filter(d => d.year === year && d.category === category)
                 .reduce((sum, d) => sum + d.amount, 0)
         )
     }));
 
-    return { years, datasets };
+    // Aggregate withdrawals per year (kept as negative values)
+    const withdrawals = years.map(year =>
+        withdrawalEntries
+            .filter(d => d.year === year)
+            .reduce((sum, d) => sum + d.amount, 0)
+    );
+
+    return { years, datasets, withdrawals };
 }
 
 /**

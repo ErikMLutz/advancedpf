@@ -1071,10 +1071,10 @@
                                     const income = this.incomeData.values[i];
                                     if (!income) return 0;
                                     const yearIdx = this.savingsData.years.indexOf(year);
-                                    const total = yearIdx >= 0
-                                        ? this.savingsData.datasets.reduce((s, ds) => s + (ds.data[yearIdx] || 0), 0)
-                                        : 0;
-                                    return total / income * 100;
+                                    if (yearIdx < 0) return 0;
+                                    const positive = this.savingsData.datasets.reduce((s, ds) => s + (ds.data[yearIdx] || 0), 0);
+                                    const withdrawal = this.savingsData.withdrawals[yearIdx] || 0;
+                                    return Math.max(0, (positive + withdrawal) / income * 100);
                                 });
                                 const credit = years.map((year, i) => {
                                     const income = this.incomeData.values[i];
@@ -1125,10 +1125,11 @@
                             const savingsRates = this.savingsData.years.map((year, yearIdx) => {
                                 const income = incomeByYear[year];
                                 if (!income) return null;
-                                const totalSavings = this.savingsData.datasets.reduce(
+                                const positive = this.savingsData.datasets.reduce(
                                     (sum, ds) => sum + (ds.data[yearIdx] || 0), 0
                                 );
-                                return Math.round(totalSavings / income * 100);
+                                const withdrawal = this.savingsData.withdrawals[yearIdx] || 0;
+                                return Math.round((positive + withdrawal) / income * 100);
                             });
 
                             createSavingsChart(

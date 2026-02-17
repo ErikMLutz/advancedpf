@@ -30,6 +30,18 @@ function createSavingsChart(canvasId, data, classified, savingsRates = []) {
         stack: 'savings'
     }));
 
+    // Withdrawals as a separate negative bar below zero (only include if any are non-zero)
+    if (data.withdrawals && data.withdrawals.some(v => v !== 0)) {
+        const withdrawalColor = chartColors[data.datasets.length % chartColors.length];
+        datasets.push({
+            label: 'Withdrawals',
+            data: data.withdrawals,
+            backgroundColor: withdrawalColor,
+            borderWidth: 0,
+            stack: 'withdrawals'
+        });
+    }
+
     // Inline plugin: draw savings rate label above each stacked bar total
     const savingsRatePlugin = {
         id: 'savingsRateLabels',
