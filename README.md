@@ -6,50 +6,22 @@ Personal finance dashboard that visualizes financial data from CSV files.
 
 ```bash
 # Generate sample data and start server
-just serve --sample-data
+just serve --generate-sample-data
 
 # Visit http://localhost:8000/web/
 ```
 
 **Or step by step:**
 ```bash
-# Generate sample data
 just generate-fake-data
-
-# Start the web app
 just serve
 ```
 
-## Usage
+## Features
 
-### Web Dashboard (Recommended)
-
-The web dashboard provides an interactive visualization with PDF export capability.
-
-```bash
-# Serve the dashboard
-just serve
-
-# Run tests
-just test
-
-# Generate PDF without UI interaction
-just generate-pdf
-```
-
-**Features:**
-- 6 interactive charts (net worth, spending, asset categorization, etc.)
-- Multiple colorscheme options (dropdown selector)
-- PDF export for sharing with advisors
+- Interactive charts: net worth (all-time and last 12 months), asset allocation, cash flow, savings, taxes
+- Multiple color themes (dropdown selector)
 - Auto-validation of data integrity
-
-### Python Version (Legacy)
-
-The original Python/matplotlib version is still available in `main.py`:
-
-```bash
-python main.py
-```
 
 ## Data Management
 
@@ -57,75 +29,116 @@ python main.py
 
 ```bash
 # Generate sample data and serve
-just serve --sample-data
+just serve --generate-sample-data
 
 # Generate sample data only
 just generate-fake-data
-
-# Run tests with sample data
-just test --sample-data
 ```
 
-**Interactive confirmation:**
-- Prompts for confirmation if data/ already exists
-- Prevents accidental deletion of real financial data
-- Type `y` to confirm deletion, `n` to cancel
+Prompts for confirmation before overwriting any existing data in `data/`.
 
 ### Real Data (1Password Integration)
-
-Store your real financial data securely in 1Password:
 
 ```bash
 # Load data from 1Password
 just load-real-data
 
-# Edit CSV files in data/ directory
+# Edit files in data/
 
 # Save back to 1Password
 just save-real-data
 ```
 
-The default 1Password item name is "AdvancedPF Data Backup". Override if needed:
+The default 1Password item name is `AdvancedPF Data Backup`. Override:
 ```bash
 export ITEM_NAME="Your Custom Item Name"
 ```
 
-### CSV Format
+### Data Format
 
-Edit the files in `data/` with your financial data:
+All data lives in `data/`. Files by type:
 
-- **cash.csv, property.csv, debt.csv, securities.csv**: Snapshot data
-  - Columns: `date,account,value`
-  - Date format: YYYY-MM-DD
-  - One row per account per month
+**Snapshot data** — `cash.csv`, `property.csv`, `debt.csv`, `securities.csv`
+```
+date,account,value
+2024-01-01,/bank/checking,5000.00
+```
 
-- **credit.csv**: Transaction/event data
-  - Columns: `date,account,value`
-  - Multiple transactions per month allowed
+**Event data** — `credit.csv` (spending is negative)
+```
+date,account,value
+2024-01-15,/visa/credit_card,-120.50
+```
 
-- **manifest.csv**: Account metadata
-  - Columns: `account,type,retirement,debt_applies_to,primary_residence`
-  - Types: cash, property, debt, securities
-  - retirement: true/false
-  - debt_applies_to: account name (for mortgages)
-  - primary_residence: true/false
+**Account metadata** — `manifest.yaml`
+```yaml
+accounts:
+  /bank/checking:
+    type: cash
+    retirement: false
+    title: Checking Account
+
+  /property/house:
+    type: property
+    retirement: false
+    primary_residence_since: 2020-01-01   # omit if never primary residence
+    primary_residence_until: 2023-06-01   # omit if still primary residence
+
+  /house/mortgage:
+    type: debt
+    retirement: false
+    debt_applies_to: /property/house
+
+  /fidelity/401k:
+    type: securities
+    retirement: true
+```
+Account types: `cash`, `property`, `debt`, `securities`
+
+**Annual income** — `income.csv`
+```
+year,total_income,federal_income_tax,state_income_tax,social_security,medicare
+2024,130000,28600,7150,9932,1885
+```
+
+**Annual savings** — `savings.csv` (negative = withdrawal)
+```
+year,account,amount
+2024,/fidelity/401k,22500
+2024,/fidelity/brokerage,8000
+```
 
 ## Architecture
 
-**Web Stack:**
-- Alpine.js: Lightweight reactivity
-- Chart.js: Interactive charts
-- Papa Parse: CSV processing
-- html2canvas + jsPDF: PDF export
+**Stack:** Alpine.js · Chart.js · Papa Parse · html2canvas + jsPDF
 
-**No build process** - all dependencies loaded via CDN.
+**No build process** — all dependencies loaded via CDN.
 
-See [AGENTS.md](AGENTS.md) for detailed architecture documentation.
+```
+Data Flow: CSV/YAML → dataLoader → dataProcessing → charts → display
+```
 
-## Sample Output
+Key files:
+- `web/index.html` — app entry point, Alpine.js dashboard state
+- `web/js/dataProcessing.js` — core data logic (SnapshotData, EventData, compute functions)
+- `web/js/dataLoader.js` — loads and parses all data files
+- `web/js/chart-*.js` — one file per chart
+- `web/js/themes.js` — theme/color system
+- `justfile` — task runner
 
-### Python Version
-![sample output](sample.png)
+See [AGENTS.md](AGENTS.md) for full architecture documentation.
 
-### Web Version
-Visit `http://localhost:8000` after running `just serve`
+---
+
+## Legacy Python Version
+
+The original Python/matplotlib version is preserved for reference in `main.py`. It is not actively maintained.
+
+```bash
+pip install -r requirements.txt
+python main.py
+```
+
+Theme definitions used by the Python version live in `themes/`.
+
+![Python version sample output](sample.png)

@@ -45,9 +45,8 @@ function generateCashData() {
 
     for (let i = 36; i >= 0; i--) {
         const date = monthsAgo(i);
-        // Random fluctuation between -2000 and +3000
         balance += Math.floor(Math.random() * 5000) - 2000;
-        balance = Math.max(500, balance); // Keep minimum balance
+        balance = Math.max(500, balance);
 
         data.push({
             date: formatDate(date),
@@ -66,7 +65,6 @@ function generatePropertyData() {
 
     for (let i = 36; i >= 0; i--) {
         const date = monthsAgo(i);
-        // Slow appreciation ~3-5% annually, with monthly noise
         value += (value * 0.004) + (Math.random() * 2000 - 1000);
 
         data.push({
@@ -86,7 +84,6 @@ function generateDebtData() {
 
     for (let i = 36; i >= 0; i--) {
         const date = monthsAgo(i);
-        // Monthly principal reduction of ~$800-1000
         balance += Math.floor(Math.random() * 200) + 800;
 
         data.push({
@@ -108,7 +105,6 @@ function generateSecuritiesData() {
     for (let i = 36; i >= 0; i--) {
         const date = monthsAgo(i);
 
-        // Monthly contribution + market gains/losses
         balance401k += 500 + (balance401k * (Math.random() * 0.04 - 0.01));
         balanceBrokerage += 200 + (balanceBrokerage * (Math.random() * 0.04 - 0.01));
 
@@ -135,10 +131,7 @@ function generateCreditData() {
     for (let i = 36; i >= 0; i--) {
         const date = monthsAgo(i);
 
-        // Random spending between $1000 and $4000 per month
         const spending = -(Math.floor(Math.random() * 3000) + 1000);
-
-        // Split into 2-5 transactions
         const numTransactions = Math.floor(Math.random() * 4) + 2;
         const perTransaction = spending / numTransactions;
 
@@ -154,52 +147,89 @@ function generateCreditData() {
     return data;
 }
 
-// Generate manifest
-function generateManifest() {
-    return [
-        {
-            account: '/bank/checking',
-            type: 'cash',
-            retirement: 'false',
-            debt_applies_to: '',
-            primary_residence: ''
-        },
-        {
-            account: '/visa/credit_card',
-            type: 'debt',
-            retirement: 'false',
-            debt_applies_to: '',
-            primary_residence: ''
-        },
-        {
-            account: '/house/mortgage',
-            type: 'debt',
-            retirement: 'false',
-            debt_applies_to: '/property/house',
-            primary_residence: ''
-        },
-        {
-            account: '/property/house',
-            type: 'property',
-            retirement: 'false',
-            debt_applies_to: '',
-            primary_residence: 'true'
-        },
-        {
+// Generate income data (annual totals)
+function generateIncomeData() {
+    const currentYear = new Date().getFullYear();
+    const data = [];
+    let income = 110000;
+
+    for (let year = currentYear - 4; year <= currentYear; year++) {
+        income = Math.round(income * (1 + Math.random() * 0.05 + 0.02));
+        const federalTax = Math.round(income * 0.22);
+        const stateTax = Math.round(income * 0.055);
+        const socialSecurity = Math.round(Math.min(income, 160200) * 0.062);
+        const medicare = Math.round(income * 0.0145);
+
+        data.push({
+            year,
+            total_income: income,
+            federal_income_tax: federalTax,
+            state_income_tax: stateTax,
+            social_security: socialSecurity,
+            medicare: medicare
+        });
+    }
+
+    return data;
+}
+
+// Generate savings data (annual contributions by account)
+function generateSavingsData() {
+    const currentYear = new Date().getFullYear();
+    const data = [];
+
+    for (let year = currentYear - 4; year <= currentYear; year++) {
+        data.push({
+            year,
             account: '/fidelity/401k',
-            type: 'securities',
-            retirement: 'true',
-            debt_applies_to: '',
-            primary_residence: ''
-        },
-        {
+            amount: Math.round(20000 + Math.random() * 3000)
+        });
+
+        data.push({
+            year,
             account: '/fidelity/brokerage',
-            type: 'securities',
-            retirement: 'false',
-            debt_applies_to: '',
-            primary_residence: ''
-        }
-    ];
+            amount: Math.round(5000 + Math.random() * 5000)
+        });
+    }
+
+    return data;
+}
+
+// Generate manifest as YAML
+function generateManifestYAML() {
+    return `accounts:
+  /bank/checking:
+    type: cash
+    retirement: false
+    title: Checking Account
+
+  /visa/credit_card:
+    type: debt
+    retirement: false
+    title: Visa Credit Card
+
+  /house/mortgage:
+    type: debt
+    retirement: false
+    debt_applies_to: /property/house
+    title: Home Mortgage
+
+  /property/house:
+    type: property
+    retirement: false
+    primary_residence_since: 2020-01-01
+    title: Primary Home
+
+  /fidelity/401k:
+    type: securities
+    retirement: true
+    title: 401(k)
+
+  /fidelity/brokerage:
+    type: securities
+    retirement: false
+    title: Brokerage Account
+`;
 }
 
 // Convert array to CSV
@@ -220,7 +250,7 @@ function hasExistingData(dataDir) {
         return false;
     }
     const files = fs.readdirSync(dataDir);
-    return files.some(f => f.endsWith('.csv'));
+    return files.some(f => f.endsWith('.csv') || f.endsWith('.yaml'));
 }
 
 // Main
@@ -229,7 +259,7 @@ async function main() {
 
     // Check for existing data and confirm deletion
     if (hasExistingData(dataDir)) {
-        console.log('⚠️  Warning: data/ folder already exists with CSV files.');
+        console.log('⚠️  Warning: data/ folder already exists with data files.');
         console.log('This will DELETE your existing financial data!');
         console.log('');
 
@@ -240,33 +270,36 @@ async function main() {
             process.exit(0);
         }
 
-        // Delete existing data
         console.log('Deleting existing data...');
         fs.rmSync(dataDir, { recursive: true, force: true });
     }
 
-    // Create data directory if it doesn't exist
     if (!fs.existsSync(dataDir)) {
         fs.mkdirSync(dataDir, { recursive: true });
     }
 
     console.log('Generating fake financial data...');
 
-    const datasets = {
+    const csvDatasets = {
         'cash.csv': generateCashData(),
         'property.csv': generatePropertyData(),
         'debt.csv': generateDebtData(),
         'securities.csv': generateSecuritiesData(),
         'credit.csv': generateCreditData(),
-        'manifest.csv': generateManifest()
+        'income.csv': generateIncomeData(),
+        'savings.csv': generateSavingsData()
     };
 
-    Object.entries(datasets).forEach(([filename, data]) => {
+    Object.entries(csvDatasets).forEach(([filename, data]) => {
         const csv = arrayToCSV(data);
         const filepath = path.join(dataDir, filename);
         fs.writeFileSync(filepath, csv);
         console.log(`✓ Generated ${filename} (${data.length} rows)`);
     });
+
+    const manifestPath = path.join(dataDir, 'manifest.yaml');
+    fs.writeFileSync(manifestPath, generateManifestYAML());
+    console.log('✓ Generated manifest.yaml');
 
     console.log('\nFake data generated successfully!');
     console.log('Run `just serve` to view the dashboard.');

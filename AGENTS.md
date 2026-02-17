@@ -38,17 +38,16 @@ Data Flow: CSV → dataLoader → dataProcessing → charts → display
 
 **web/js/chart-\*.js**: One file per chart. Each exports a single `create*Chart(canvasId, data, classified, ...)` function. Destroy previous chart instance before creating new one.
 
-**justfile**: Task runner (serve, test, generate-fake-data, load/save-real-data)
+**justfile**: Task runner (serve, generate-fake-data, load/save-real-data)
 **scripts/**: Data management (generate fake data, 1Password sync)
-**tests/**: Vitest tests for data processing logic
 
 ## Data Model
 
-### CSV Files (in data/) — DO NOT READ
+### Data Files (in data/) — DO NOT READ
 
 - **cash.csv, property.csv, debt.csv, securities.csv**: Snapshot data (`date, account, value`)
 - **credit.csv**: Event data — transactions by date (`date, account, value`; spending is negative)
-- **manifest.csv**: Account metadata (`account, type, retirement, debt_applies_to, primary_residence`)
+- **manifest.yaml**: Account metadata — YAML dict of accounts with fields: `type`, `retirement`, `debt_applies_to`, `primary_residence_since`, `primary_residence_until`, `title`
 - **income.csv**: Annual income/tax breakdown (`year, total_income, federal_income_tax, state_income_tax, social_security, medicare`)
 - **savings.csv**: Annual savings contributions (`year, account, amount`; negative = withdrawal)
 
@@ -106,8 +105,7 @@ Both provide:
 ### Modify Data Processing
 
 1. Update logic in `web/js/dataProcessing.js`
-2. Add test in `tests/data-processing.test.js`
-3. Run `just test` to validate
+2. Validate with `just serve` and check browser console
 
 ### Add a New Data Source
 
