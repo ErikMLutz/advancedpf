@@ -420,6 +420,50 @@ function getAccountsWithMetadata(sources, manifest, currentMonthOnly = true) {
 }
 
 /**
+ * Compute savings by year and category (stacked bar chart data)
+ * Schema: year, account, amount — multiple rows per year+account are summed
+ * @param {Array} savingsRows - Raw savings CSV rows
+ * @param {Array} manifest - Manifest data (already parsed booleans)
+ * @returns {{ years: string[], datasets: Array<{category: string, data: number[]}> }}
+ */
+function computeSavingsAllocation(savingsRows, manifest) {
+    // Sum amounts by year+account (handles multiple rows per account per year)
+    const yearAccountTotals = {};
+    savingsRows.forEach(row => {
+        const key = `${row.year}|${row.account}`;
+        yearAccountTotals[key] = (yearAccountTotals[key] || 0) + row.amount;
+    });
+
+    // Categorize each year+account entry using shared categorization logic
+    const categorized = Object.entries(yearAccountTotals).map(([key, amount]) => {
+        const [year, account] = key.split('|');
+        const meta = manifest.find(m => m.account === account);
+        if (!meta) {
+            console.warn(`Account "${account}" in savings.csv not found in manifest`);
+            return null;
+        }
+        const category = categorizeAccount(meta);
+        return { year, amount, category };
+    }).filter(d => d !== null);
+
+    // Sorted unique years and categories
+    const years = [...new Set(categorized.map(d => d.year))].sort();
+    const categories = [...new Set(categorized.map(d => d.category))].sort();
+
+    // Build one dataset per category with a value per year
+    const datasets = categories.map(category => ({
+        category,
+        data: years.map(year =>
+            categorized
+                .filter(d => d.year === year && d.category === category)
+                .reduce((sum, d) => sum + d.amount, 0)
+        )
+    }));
+
+    return { years, datasets };
+}
+
+/**
  * Compute asset allocation by category (replicates Python asset categorization logic)
  * @param {Array} sources - Array of SnapshotData sources (cash, property, debt, securities)
  * @param {Object} manifest - Manifest data with account metadata

@@ -36,6 +36,8 @@
     <script src="js/chart-netWorth12Months.js"></script>
     <script src="js/chart-assetAllocation.js"></script>
     <script src="js/chart-income.js"></script>
+    <script src="js/chart-creditSpending.js"></script>
+    <script src="js/chart-savings.js"></script>
 </head>
 <body>
     <!-- Alpine.js App -->
@@ -682,14 +684,49 @@
                         </h2>
                     </div>
 
-                    <!-- Income Chart -->
+                    <!-- Income + Credit Spending Side by Side -->
+                    <div class="grid grid-cols-2 gap-8 mb-8">
+                        <!-- Income Chart -->
+                        <div>
+                            <h2 class="text-xl font-light mb-4"
+                                :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
+                                income
+                            </h2>
+                            <div style="position: relative; height: 300px; width: 100%;">
+                                <canvas id="incomeChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Credit Card Spending Chart -->
+                        <div>
+                            <h2 class="text-xl font-light mb-4"
+                                :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
+                                credit card spending
+                            </h2>
+                            <div style="position: relative; height: 300px; width: 100%;">
+                                <canvas id="creditSpendingChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Savings Section -->
+                <div x-show="!hasError" class="w-full mt-16">
+                    <div class="mb-8">
+                        <h2 class="text-4xl font-light mb-1"
+                            :style="`color: ${theme ? theme.classified.text : textColor};`">
+                            Savings
+                        </h2>
+                    </div>
+
+                    <!-- Savings Total Chart -->
                     <div class="w-full mb-8">
                         <h2 class="text-xl font-light mb-4"
                             :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
-                            income
+                            total
                         </h2>
-                        <div style="position: relative; height: 300px; width: 100%;">
-                            <canvas id="incomeChart"></canvas>
+                        <div style="position: relative; height: 350px; width: 100%;">
+                            <canvas id="savingsChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -719,6 +756,8 @@
                 netWorth12MonthsData: null,
                 assetAllocationData: null,
                 incomeData: null,
+                creditSpendingData: null,
+                savingsData: null,
                 dataLoadError: null,
                 themeMapping: {},
                 themeCopied: false,
@@ -909,8 +948,16 @@
                             years: sortedIncome.map(d => String(d.year)),
                             values: sortedIncome.map(d => d.total_income),
                             federalTax: sortedIncome.map(d => d.federal_income_tax),
-                            stateTax: sortedIncome.map(d => d.state_income_tax)
+                            stateTax: sortedIncome.map(d => d.state_income_tax),
+                            socialSecurity: sortedIncome.map(d => d.social_security),
+                            medicare: sortedIncome.map(d => d.medicare)
                         };
+
+                        // Credit card spending: last 12 months with trailing averages
+                        this.creditSpendingData = computeValueOverLast12Months([credit]);
+
+                        // Savings by year and category
+                        this.savingsData = computeSavingsAllocation(rawData.savings, rawData.manifest);
 
                         this.dataLoadError = null;
 
@@ -954,6 +1001,22 @@
                             createIncomeChart(
                                 'incomeChart',
                                 this.incomeData,
+                                this.theme.classified
+                            );
+                        }
+
+                        if (this.creditSpendingData && this.dataLoadError === null) {
+                            createCreditSpendingChart(
+                                'creditSpendingChart',
+                                this.creditSpendingData,
+                                this.theme.classified
+                            );
+                        }
+
+                        if (this.savingsData && this.dataLoadError === null) {
+                            createSavingsChart(
+                                'savingsChart',
+                                this.savingsData,
                                 this.theme.classified
                             );
                         }
