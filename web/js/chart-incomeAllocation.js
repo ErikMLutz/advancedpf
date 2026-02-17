@@ -1,10 +1,11 @@
-// Income Allocation 100% Stacked Bar Chart
-// Shows where income goes each year: taxes, savings, credit spending, uncategorized
+// Income Allocation Stacked Bar Chart
+// Shows where income goes each year as % of income: taxes, savings, credit spending
+// A reference line at 100% marks full income. Bars above = spending more than earned.
 
 /**
- * Create income allocation chart (100% stacked bars per year)
+ * Create income allocation chart (stacked bars as % of income, with 100% reference line)
  * @param {string} canvasId - Canvas element ID
- * @param {{ years, taxes, savings, credit, uncategorized }} data - Percentage arrays per year
+ * @param {{ years, taxes, savings, credit }} data - Percentage arrays per year
  * @param {Object} classified - Classified color scheme
  */
 function createIncomeAllocationChart(canvasId, data, classified) {
@@ -14,31 +15,40 @@ function createIncomeAllocationChart(canvasId, data, classified) {
         window.incomeAllocationChart.destroy();
     }
 
-    const chartColors = [
-        classified.chart1,
-        classified.chart2,
-        classified.chart3,
-        classified.chart4
-    ];
-
-    const datasets = [
-        { label: 'taxes',         key: 'taxes' },
-        { label: 'savings',       key: 'savings' },
-        { label: 'credit spend',  key: 'credit' },
-        { label: 'uncategorized', key: 'uncategorized' }
-    ].map((ds, i) => ({
+    const barDatasets = [
+        { label: 'taxes',        key: 'taxes',   color: classified.chart1 },
+        { label: 'savings',      key: 'savings',  color: classified.chart2 },
+        { label: 'credit spend', key: 'credit',   color: classified.chart3 },
+    ].map(ds => ({
         label: ds.label,
         data: data[ds.key],
-        backgroundColor: chartColors[i],
+        backgroundColor: ds.color,
         borderWidth: 0,
-        stack: 'allocation'
+        stack: 'allocation',
+        type: 'bar',
+        order: 1
     }));
+
+    // Reference line at 100%
+    const referenceLine = {
+        label: '100% of income',
+        data: data.years.map(() => 100),
+        type: 'line',
+        borderColor: classified.textSubtle,
+        borderWidth: 1.5,
+        borderDash: [4, 4],
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        fill: false,
+        stack: undefined,
+        order: 0
+    };
 
     window.incomeAllocationChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: data.years,
-            datasets
+            datasets: [...barDatasets, referenceLine]
         },
         options: {
             responsive: true,
@@ -52,7 +62,8 @@ function createIncomeAllocationChart(canvasId, data, classified) {
                         color: classified.textSubtle,
                         font: { size: 11, weight: 300 },
                         boxWidth: 12,
-                        padding: 12
+                        padding: 12,
+                        filter: (item) => item.text !== '100% of income'
                     }
                 },
                 tooltip: {
@@ -64,6 +75,7 @@ function createIncomeAllocationChart(canvasId, data, classified) {
                     padding: 12,
                     callbacks: {
                         label: function(context) {
+                            if (context.dataset.label === '100% of income') return null;
                             const value = context.parsed.y;
                             if (!value) return null;
                             return `${context.dataset.label}: ${value.toFixed(1)}%`;
@@ -83,7 +95,6 @@ function createIncomeAllocationChart(canvasId, data, classified) {
                 y: {
                     stacked: true,
                     min: 0,
-                    max: 100,
                     ticks: {
                         color: classified.textSubtle,
                         font: { size: 11, weight: 300 },

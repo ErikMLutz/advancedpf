@@ -80,7 +80,7 @@ Both provide:
 - **asset allocation** (`assetAllocationChart`): Pie chart with datalabels
 
 ### Cash Flow
-- **allocation** (`incomeAllocationChart`): 100% stacked bar — taxes / savings / credit spend / uncategorized
+- **allocation** (`incomeAllocationChart`): Stacked bar as % of income — taxes / savings / credit spend. Dashed reference line at 100%; bars above = spending > income. No "uncategorized" fill.
 - **income** (`incomeChart`): Bar chart, annual totals
 - **credit card spending** (`creditSpendingChart`): Mixed — bars + 2 trailing avg lines
 

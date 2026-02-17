@@ -334,10 +334,7 @@ document.addEventListener('alpine:init', () => {
                             // Values are negative (spending), negate to get positive %
                             return -(this.creditByYearData[year] || 0) / income * 100;
                         });
-                        const uncategorized = years.map((_, i) =>
-                            Math.max(0, 100 - taxes[i] - savings[i] - credit[i])
-                        );
-                        return { years, taxes, savings, credit, uncategorized };
+                        return { years, taxes, savings, credit };
                     })();
 
                     createIncomeAllocationChart(
