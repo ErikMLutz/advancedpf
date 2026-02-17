@@ -819,6 +819,96 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Accounts Section -->
+                <div x-show="!hasError" class="w-full mt-16 mb-8">
+                    <div class="mb-8">
+                        <h2 class="text-4xl font-light mb-1"
+                            :style="`color: ${theme ? theme.classified.text : textColor};`">
+                            Accounts
+                        </h2>
+                    </div>
+
+                    <template x-if="accountsData">
+                        <div>
+                            <!-- Non-Retirement Table -->
+                            <template x-if="accountsData.nonRetirement.length > 0">
+                                <div class="mb-12">
+                                    <h2 class="text-xl font-light mb-4"
+                                        :style="`color: ${theme.classified.textSubtle};`">
+                                        non-retirement
+                                    </h2>
+                                    <table class="w-full">
+                                        <thead>
+                                            <tr :style="`border-bottom: 1px solid ${theme.classified.backgroundAlt};`">
+                                                <th class="text-left font-light py-2 pb-3 text-sm opacity-60">account</th>
+                                                <th class="text-left font-light py-2 pb-3 text-sm opacity-60">category</th>
+                                                <th class="text-right font-light py-2 pb-3 text-sm opacity-60">balance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template x-for="row in accountsData.nonRetirement" :key="row.account">
+                                                <tr :style="`border-bottom: 1px solid ${theme.classified.backgroundAlt};`">
+                                                    <td class="py-3 font-light"
+                                                        :class="row.isSubRow ? 'pl-8 text-sm' : ''"
+                                                        :style="`color: ${row.isSubRow ? theme.classified.textSubtle : theme.classified.text};`">
+                                                        <span x-show="row.isSubRow" class="mr-1 opacity-40">↳</span>
+                                                        <span x-text="row.title"></span>
+                                                    </td>
+                                                    <td class="py-3 font-light text-sm"
+                                                        :style="`color: ${theme.classified.textSubtle};`"
+                                                        x-text="row.category"></td>
+                                                    <td class="py-3 font-light text-right">
+                                                        <span x-text="formatAccountCurrency(row.value)"
+                                                              :style="`color: ${row.isSubRow ? theme.classified.chartWarn : theme.classified.text};`"></span>
+                                                        <span x-show="row.debtRows && row.debtRows.length > 0"
+                                                              class="ml-2 text-sm"
+                                                              :style="`color: ${theme.classified.textSubtle};`"
+                                                              x-text="`(net ${formatAccountCurrency(row.netValue)})`"></span>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </template>
+
+                            <!-- Retirement Table -->
+                            <template x-if="accountsData.retirement.length > 0">
+                                <div class="mb-8">
+                                    <h2 class="text-xl font-light mb-4"
+                                        :style="`color: ${theme.classified.textSubtle};`">
+                                        retirement
+                                    </h2>
+                                    <table class="w-full">
+                                        <thead>
+                                            <tr :style="`border-bottom: 1px solid ${theme.classified.backgroundAlt};`">
+                                                <th class="text-left font-light py-2 pb-3 text-sm opacity-60">account</th>
+                                                <th class="text-left font-light py-2 pb-3 text-sm opacity-60">category</th>
+                                                <th class="text-right font-light py-2 pb-3 text-sm opacity-60">balance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template x-for="row in accountsData.retirement" :key="row.account">
+                                                <tr :style="`border-bottom: 1px solid ${theme.classified.backgroundAlt};`">
+                                                    <td class="py-3 font-light"
+                                                        :style="`color: ${theme.classified.text};`"
+                                                        x-text="row.title"></td>
+                                                    <td class="py-3 font-light text-sm"
+                                                        :style="`color: ${theme.classified.textSubtle};`"
+                                                        x-text="row.category"></td>
+                                                    <td class="py-3 font-light text-right"
+                                                        :style="`color: ${theme.classified.text};`"
+                                                        x-text="formatAccountCurrency(row.value)"></td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
             </div>
         </div>
     </div>
@@ -861,6 +951,7 @@
                 creditSpendingData: null,
                 creditByYearData: null,
                 savingsData: null,
+                accountsData: null,
                 dataLoadError: null,
                 themeMapping: {},
                 themePalette: {},
@@ -1078,6 +1169,9 @@
 
                         // Savings by year and category
                         this.savingsData = computeSavingsAllocation(rawData.savings, rawData.manifest);
+
+                        // Accounts table (current balances, split by retirement)
+                        this.accountsData = computeAccountsTable(sources, rawData.manifest);
 
                         this.dataLoadError = null;
 
@@ -1387,6 +1481,15 @@
                     const updated = { ...this.themePalette };
                     delete updated[familyName];
                     this.themePalette = updated;
+                },
+
+                formatAccountCurrency(value) {
+                    if (value === null || value === undefined) return '—';
+                    const sign = value < 0 ? '-' : '';
+                    const abs = Math.abs(value);
+                    if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+                    if (abs >= 1_000) return `${sign}$${Math.round(abs / 1_000)}k`;
+                    return `${sign}$${Math.round(abs)}`;
                 },
 
                 addPaletteColor() {

@@ -542,6 +542,79 @@ function computeSavingsAllocation(savingsRows, manifest) {
 }
 
 /**
+ * Compute accounts table data for current-month balances
+ * Returns raw per-account values (no debt netting), with debt accounts that apply to
+ * a property attached as sub-rows. Debt with no debt_applies_to (e.g. credit cards) is excluded.
+ * Results are split into non-retirement and retirement groups, each sorted by value descending.
+ * @param {Array} sources - Array of SnapshotData sources (cash, property, debt, securities)
+ * @param {Array} manifest - Manifest data with account metadata
+ * @returns {{ nonRetirement: Array, retirement: Array }}
+ *   Each row: { account, value, netValue, category, debtRows, isSubRow }
+ *   Sub-rows (isSubRow=true): { account, value, netValue, category, debtRows: [], isSubRow: true }
+ */
+function computeAccountsTable(sources, manifest) {
+    // Collect current-month values for every account across all sources
+    const accountValues = {};
+    sources.forEach(source => {
+        source.valueByAccount().forEach(row => {
+            accountValues[row.account] = (accountValues[row.account] || 0) + row.value;
+        });
+    });
+
+    // Index debt accounts that are linked to a specific asset (e.g. mortgages)
+    const debtByAppliesTo = {};
+    manifest.forEach(meta => {
+        if (meta.type !== 'debt' || !meta.debt_applies_to) return;
+        const value = accountValues[meta.account];
+        if (!value || value === 0) return;
+        if (!debtByAppliesTo[meta.debt_applies_to]) {
+            debtByAppliesTo[meta.debt_applies_to] = [];
+        }
+        debtByAppliesTo[meta.debt_applies_to].push({ account: meta.account, title: meta.title || meta.account, value });
+    });
+
+    const nonRetirement = [];
+    const retirement = [];
+
+    manifest.forEach(meta => {
+        if (meta.type === 'debt') return; // debt shown only as sub-rows
+        const value = accountValues[meta.account];
+        if (!value || value === 0) return;
+
+        const debtRows = debtByAppliesTo[meta.account] || [];
+        const netValue = value + debtRows.reduce((sum, d) => sum + d.value, 0);
+        const category = categorizeAccount({
+            ...meta,
+            primary_residence: isPrimaryResidence(meta, undefined)
+        });
+
+        const row = { account: meta.account, title: meta.title || meta.account, value, netValue, category, debtRows };
+        if (meta.retirement === true) {
+            retirement.push(row);
+        } else {
+            nonRetirement.push(row);
+        }
+    });
+
+    nonRetirement.sort((a, b) => b.value - a.value);
+    retirement.sort((a, b) => b.value - a.value);
+
+    // Flatten each group: interleave parent rows with their debt sub-rows
+    const flatten = (rows) => {
+        const flat = [];
+        rows.forEach(row => {
+            flat.push({ account: row.account, title: row.title, value: row.value, netValue: row.netValue, category: row.category, debtRows: row.debtRows, isSubRow: false });
+            row.debtRows.forEach(debt => {
+                flat.push({ account: debt.account, title: debt.title, value: debt.value, netValue: debt.value, category: 'mortgage', debtRows: [], isSubRow: true });
+            });
+        });
+        return flat;
+    };
+
+    return { nonRetirement: flatten(nonRetirement), retirement: flatten(retirement) };
+}
+
+/**
  * Compute asset allocation by category (replicates Python asset categorization logic)
  * @param {Array} sources - Array of SnapshotData sources (cash, property, debt, securities)
  * @param {Object} manifest - Manifest data with account metadata
