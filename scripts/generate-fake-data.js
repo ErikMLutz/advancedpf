@@ -58,19 +58,27 @@ function generateCashData() {
     return data;
 }
 
-// Generate property data (house value with slow appreciation)
+// Generate property data (house value with slow appreciation + rental property)
 function generatePropertyData() {
     const data = [];
-    let value = 300000;
+    let houseValue = 300000;
+    let rentalValue = 200000;
 
     for (let i = 36; i >= 0; i--) {
         const date = monthsAgo(i);
-        value += (value * 0.004) + (Math.random() * 2000 - 1000);
+        houseValue += (houseValue * 0.004) + (Math.random() * 2000 - 1000);
+        rentalValue += (rentalValue * 0.003) + (Math.random() * 1500 - 750);
 
         data.push({
             date: formatDate(date),
             account: '/property/house',
-            value: value.toFixed(2)
+            value: houseValue.toFixed(2)
+        });
+
+        data.push({
+            date: formatDate(date),
+            account: '/property/rental',
+            value: rentalValue.toFixed(2)
         });
     }
 
@@ -96,17 +104,19 @@ function generateDebtData() {
     return data;
 }
 
-// Generate securities data (401k and brokerage with market volatility)
+// Generate securities data (401k, Roth IRA, and brokerage with market volatility)
 function generateSecuritiesData() {
     const data = [];
     let balance401k = 50000;
     let balanceBrokerage = 30000;
+    let balanceRothIra = 15000;
 
     for (let i = 36; i >= 0; i--) {
         const date = monthsAgo(i);
 
         balance401k += 500 + (balance401k * (Math.random() * 0.04 - 0.01));
         balanceBrokerage += 200 + (balanceBrokerage * (Math.random() * 0.04 - 0.01));
+        balanceRothIra += 100 + (balanceRothIra * (Math.random() * 0.04 - 0.01));
 
         data.push({
             date: formatDate(date),
@@ -118,6 +128,12 @@ function generateSecuritiesData() {
             date: formatDate(date),
             account: '/fidelity/brokerage',
             value: balanceBrokerage.toFixed(2)
+        });
+
+        data.push({
+            date: formatDate(date),
+            account: '/fidelity/roth_ira',
+            value: balanceRothIra.toFixed(2)
         });
     }
 
@@ -173,9 +189,10 @@ function generateIncomeData() {
     return data;
 }
 
-// Generate savings data (annual contributions by account)
+// Generate savings data (annual contributions by account, including a withdrawal year)
 function generateSavingsData() {
     const currentYear = new Date().getFullYear();
+    const withdrawalYear = currentYear - 2;
     const data = [];
 
     for (let year = currentYear - 4; year <= currentYear; year++) {
@@ -187,9 +204,24 @@ function generateSavingsData() {
 
         data.push({
             year,
+            account: '/fidelity/roth_ira',
+            amount: Math.round(6000 + Math.random() * 1000)
+        });
+
+        data.push({
+            year,
             account: '/fidelity/brokerage',
             amount: Math.round(5000 + Math.random() * 5000)
         });
+
+        // Withdrawal in one year to exercise the negative-bar feature
+        if (year === withdrawalYear) {
+            data.push({
+                year,
+                account: '/fidelity/brokerage',
+                amount: -Math.round(8000 + Math.random() * 4000)
+            });
+        }
     }
 
     return data;
@@ -220,10 +252,24 @@ function generateManifestYAML() {
     primary_residence_since: 2020-01-01
     title: Primary Home
 
+  /property/rental:
+    type: property
+    retirement: false
+    primary_residence_since: 2022-01-01
+    primary_residence_until: 2023-06-30
+    title: Rental Property
+
   /fidelity/401k:
     type: securities
     retirement: true
+    tax_treatment: pre-tax
     title: 401(k)
+
+  /fidelity/roth_ira:
+    type: securities
+    retirement: true
+    tax_treatment: roth
+    title: Roth IRA
 
   /fidelity/brokerage:
     type: securities
