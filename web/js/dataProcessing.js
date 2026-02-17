@@ -591,7 +591,8 @@ function computeAccountsTable(sources, manifest) {
             primary_residence: isPrimaryResidence(meta, undefined)
         });
 
-        const row = { account: meta.account, title: meta.title || meta.account, value, netValue, category, debtRows };
+        const taxTreatment = meta.tax_treatment || 'taxable';
+        const row = { account: meta.account, title: meta.title || meta.account, value, netValue, category, taxTreatment, debtRows };
         if (meta.retirement === true) {
             retirement.push(row);
         } else {
@@ -606,9 +607,9 @@ function computeAccountsTable(sources, manifest) {
     const flatten = (rows) => {
         const flat = [];
         rows.forEach(row => {
-            flat.push({ account: row.account, title: row.title, value: row.value, netValue: row.netValue, category: row.category, debtRows: row.debtRows, isSubRow: false });
+            flat.push({ account: row.account, title: row.title, value: row.value, netValue: row.netValue, category: row.category, taxTreatment: row.taxTreatment, debtRows: row.debtRows, isSubRow: false });
             row.debtRows.forEach(debt => {
-                flat.push({ account: debt.account, title: debt.title, value: debt.value, netValue: debt.value, category: 'mortgage', debtRows: [], isSubRow: true });
+                flat.push({ account: debt.account, title: debt.title, value: debt.value, netValue: debt.value, category: 'mortgage', taxTreatment: 'taxable', debtRows: [], isSubRow: true });
             });
         });
         return flat;

@@ -865,11 +865,18 @@
                                         :style="`color: ${theme.classified.textSubtle};`">
                                         non-retirement
                                     </h2>
-                                    <table class="w-full">
+                                    <table class="w-full" style="table-layout: fixed;">
+                                        <colgroup>
+                                            <col style="width: 40%;">
+                                            <col style="width: 25%;">
+                                            <col style="width: 20%;">
+                                            <col style="width: 15%;">
+                                        </colgroup>
                                         <thead>
                                             <tr :style="`border-bottom: 1px solid ${theme.classified.backgroundAlt};`">
                                                 <th class="text-left font-light py-2 pb-3 text-sm opacity-60">account</th>
                                                 <th class="text-left font-light py-2 pb-3 text-sm opacity-60">category</th>
+                                                <th class="text-left font-light py-2 pb-3 text-sm opacity-60">tax treatment</th>
                                                 <th class="text-right font-light py-2 pb-3 text-sm opacity-60">balance</th>
                                             </tr>
                                         </thead>
@@ -885,6 +892,9 @@
                                                     <td class="py-3 font-light text-sm"
                                                         :style="`color: ${theme.classified.textSubtle};`"
                                                         x-text="row.category"></td>
+                                                    <td class="py-3 font-light text-sm"
+                                                        :style="`color: ${theme.classified.textSubtle};`"
+                                                        x-text="row.taxTreatment !== 'taxable' ? row.taxTreatment : ''"></td>
                                                     <td class="py-3 font-light text-right">
                                                         <span x-text="formatAccountCurrency(row.value)"
                                                               :style="`color: ${row.isSubRow ? theme.classified.chartWarn : theme.classified.text};`"></span>
@@ -907,11 +917,18 @@
                                         :style="`color: ${theme.classified.textSubtle};`">
                                         retirement
                                     </h2>
-                                    <table class="w-full">
+                                    <table class="w-full" style="table-layout: fixed;">
+                                        <colgroup>
+                                            <col style="width: 40%;">
+                                            <col style="width: 25%;">
+                                            <col style="width: 20%;">
+                                            <col style="width: 15%;">
+                                        </colgroup>
                                         <thead>
                                             <tr :style="`border-bottom: 1px solid ${theme.classified.backgroundAlt};`">
                                                 <th class="text-left font-light py-2 pb-3 text-sm opacity-60">account</th>
                                                 <th class="text-left font-light py-2 pb-3 text-sm opacity-60">category</th>
+                                                <th class="text-left font-light py-2 pb-3 text-sm opacity-60">tax treatment</th>
                                                 <th class="text-right font-light py-2 pb-3 text-sm opacity-60">balance</th>
                                             </tr>
                                         </thead>
@@ -924,6 +941,9 @@
                                                     <td class="py-3 font-light text-sm"
                                                         :style="`color: ${theme.classified.textSubtle};`"
                                                         x-text="row.category"></td>
+                                                    <td class="py-3 font-light text-sm"
+                                                        :style="`color: ${theme.classified.textSubtle};`"
+                                                        x-text="row.taxTreatment !== 'taxable' ? row.taxTreatment : ''"></td>
                                                     <td class="py-3 font-light text-right"
                                                         :style="`color: ${theme.classified.text};`"
                                                         x-text="formatAccountCurrency(row.value)"></td>
