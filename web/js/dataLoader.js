@@ -72,6 +72,8 @@ async function loadManifestYAML(path) {
         debt_applies_to: fields.debt_applies_to ?? null,
         primary_residence_since: normalizeDateField(fields.primary_residence_since),
         primary_residence_until: normalizeDateField(fields.primary_residence_until),
+        investment_since: normalizeDateField(fields.investment_since),
+        investment_until: normalizeDateField(fields.investment_until),
     }));
 }
 

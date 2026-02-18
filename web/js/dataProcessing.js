@@ -71,6 +71,30 @@ function isPrimaryResidence(meta, monthStr) {
 }
 
 /**
+ * Helper: Check if an account was an investment property for a given month.
+ * Uses manifest's investment_since / investment_until (YYYY-MM-DD strings).
+ * Comparison is at month granularity (YYYY-MM), inclusive on both ends.
+ * Falls back to current month when monthStr is undefined (for current-state charts).
+ * @param {Object} meta - Manifest row
+ * @param {string|undefined} monthStr - Month in YYYY-MM format
+ * @returns {boolean}
+ */
+function isInvestmentProperty(meta, monthStr) {
+    const since = meta.investment_since;
+    const until = meta.investment_until;
+    if (!since && !until) return false;
+
+    const month = monthStr || formatMonth(new Date());
+    const sinceMonth = since ? since.substring(0, 7) : null;
+    const untilMonth = until ? until.substring(0, 7) : null;
+
+    if (sinceMonth && untilMonth) return month >= sinceMonth && month <= untilMonth;
+    if (sinceMonth) return month >= sinceMonth;
+    if (untilMonth) return month <= untilMonth;
+    return false;
+}
+
+/**
  * Helper: Forward fill missing values
  * @param {Array} data - Array of {month, value} objects
  * @returns {Array} Data with forward-filled values
@@ -400,6 +424,8 @@ function computeValueOverLast12Months(sources) {
 function categorizeAccount(account) {
     if (account.primary_residence === true) {
         return 'primary residence';
+    } else if (account.investment_property === true) {
+        return 'investment property';
     } else if (account.retirement === true) {
         return `retirement ${account.type}`;
     }
@@ -454,6 +480,7 @@ function getAccountsWithMetadata(sources, manifest, currentMonthOnly = true, mon
             type: meta.type || row.sourceType,
             retirement: meta.retirement === true,
             primary_residence: isPrimaryResidence(meta, row.month),
+            investment_property: isInvestmentProperty(meta, row.month),
             debt_applies_to: meta.debt_applies_to || ''
         };
     }).filter(row => row !== null);
@@ -588,7 +615,8 @@ function computeAccountsTable(sources, manifest) {
         const netValue = value + debtRows.reduce((sum, d) => sum + d.value, 0);
         const category = categorizeAccount({
             ...meta,
-            primary_residence: isPrimaryResidence(meta, undefined)
+            primary_residence: isPrimaryResidence(meta, undefined),
+            investment_property: isInvestmentProperty(meta, undefined)
         });
 
         const taxTreatment = meta.tax_treatment || 'taxable';
