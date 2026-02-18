@@ -738,7 +738,7 @@
                 </div>
 
                 <!-- Cash Flow Section -->
-                <div x-show="!hasError" class="w-full mt-16">
+                <div id="cashflow-section" x-show="!hasError" class="w-full mt-16">
                     <div class="mb-8">
                         <h2 class="text-4xl font-light mb-1"
                             :style="`color: ${theme ? theme.classified.text : textColor};`">
@@ -784,7 +784,7 @@
                 </div>
 
                 <!-- Savings Section -->
-                <div x-show="!hasError" class="w-full mt-16">
+                <div id="savings-section" x-show="!hasError" class="w-full mt-16">
                     <div class="mb-8">
                         <h2 class="text-4xl font-light mb-1"
                             :style="`color: ${theme ? theme.classified.text : textColor};`">
@@ -805,7 +805,7 @@
                 </div>
 
                 <!-- Taxes Section -->
-                <div x-show="!hasError" class="w-full mt-16">
+                <div id="taxes-section" x-show="!hasError" class="w-full mt-16">
                     <div class="mb-8">
                         <h2 class="text-4xl font-light mb-1"
                             :style="`color: ${theme ? theme.classified.text : textColor};`">
@@ -825,7 +825,7 @@
                 </div>
 
                 <!-- Retirement Section -->
-                <div x-show="!hasError" class="w-full mt-16">
+                <div id="retirement-section" x-show="!hasError" class="w-full mt-16">
                     <div class="mb-8">
                         <h2 class="text-4xl font-light mb-1"
                             :style="`color: ${theme ? theme.classified.text : textColor};`">
@@ -848,7 +848,7 @@
                 </div>
 
                 <!-- Accounts Section -->
-                <div x-show="!hasError" class="w-full mt-16 mb-8">
+                <div id="accounts-section" x-show="!hasError" class="w-full mt-16 mb-8">
                     <div class="mb-8">
                         <h2 class="text-4xl font-light mb-1"
                             :style="`color: ${theme ? theme.classified.text : textColor};`">
@@ -960,10 +960,105 @@
         </div>
     </div>
 
+    <!-- Prepare charts for print, then restore for screen -->
+    <script>
+        window.addEventListener('beforeprint', () => {
+            if (typeof Chart !== 'undefined') {
+                Object.values(Chart.instances).forEach(chart => {
+                    // stop() cancels the in-flight requestAnimationFrame so it can't
+                    // overdraw the canvas after we render. update('none') then draws
+                    // the final state synchronously.
+                    chart.stop();
+                    chart.update('none');
+                });
+            }
+        });
+        window.addEventListener('afterprint', () => {
+            if (typeof Chart !== 'undefined') {
+                Object.values(Chart.instances).forEach(chart => chart.resize());
+            }
+        });
+    </script>
+
+
     <!-- Alpine.js x-cloak style -->
     <style>
         [x-cloak] {
             display: none !important;
+        }
+
+        /* Remove browser default page margins so background fills edge-to-edge */
+        @page { margin: 0; }
+
+        @media print {
+            /* Render colors exactly as on screen */
+            *, *::before, *::after {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                /* Kill transitions so nothing is mid-animation */
+                transition: none !important;
+                animation: none !important;
+            }
+
+            /* Fill empty space at the bottom of the last page.
+               body::after is a non-root element, so its background-color prints
+               reliably (same mechanism as the Alpine div, which we know works).
+               It appears after all content in normal flow, filling the remainder
+               of the last page. This pushes any residual white to an extra blank
+               page at the very end rather than the last content page. */
+            body::after {
+                content: '';
+                display: block;
+                height: 100vh;
+                background-color: var(--theme-bg);
+            }
+
+            /* Hide all fixed UI chrome: top-right icons, loading modal, settings modal */
+            .fixed {
+                display: none !important;
+            }
+
+            /* Scale canvas to fit print width, preserving aspect ratio.
+               Canvas is a replaced element with intrinsic dimensions, so
+               max-width + height: auto scales it proportionally like an <img>.
+               This avoids overflow without needing a JS resize. */
+            canvas {
+                max-width: 100% !important;
+                height: auto !important;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            /* Override the fixed inline heights (e.g. height: 400px) so the
+               container collapses to the CSS-scaled canvas height. */
+            div:has(> canvas) {
+                height: auto !important;
+                page-break-inside: avoid;
+                break-inside: avoid;
+                overflow: hidden;
+            }
+
+            /* Suggest page breaks before major sections */
+            #cashflow-section, #savings-section, #retirement-section, #accounts-section {
+                page-break-before: always;
+                break-before: page;
+                padding-top: 4rem;
+            }
+
+            /* Keep the entire accounts section together */
+            #accounts-section {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            /* Shrink accounts table text and row height to fit on one page */
+            #accounts-section table td,
+            #accounts-section table td span,
+            #accounts-section table th {
+                font-size: 0.7rem !important;
+                padding-top: 0.25rem !important;
+                padding-bottom: 0.25rem !important;
+            }
         }
     </style>
 

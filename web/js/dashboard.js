@@ -47,6 +47,15 @@ document.addEventListener('alpine:init', () => {
             await initThemes();
             this.allThemes = getAllThemes();
             this.loadTheme();
+
+            // Keep --theme-bg in sync for the @media print html/body background rule,
+            // which fills the page canvas below the last content element.
+            const syncBgColor = (val) => {
+                document.documentElement.style.setProperty('--theme-bg', val);
+            };
+            syncBgColor(this.backgroundColor);
+            this.$watch('backgroundColor', syncBgColor);
+
             await this.loadData();
             this.renderCharts();
 
