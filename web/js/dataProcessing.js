@@ -631,6 +631,9 @@ function computeAccountsTable(sources, manifest) {
     nonRetirement.sort((a, b) => b.netValue - a.netValue);
     retirement.sort((a, b) => b.netValue - a.netValue);
 
+    const nonRetirementTotal = nonRetirement.reduce((sum, r) => sum + r.netValue, 0);
+    const retirementTotal = retirement.reduce((sum, r) => sum + r.netValue, 0);
+
     // Flatten each group: interleave parent rows with their debt sub-rows
     const flatten = (rows) => {
         const flat = [];
@@ -643,7 +646,7 @@ function computeAccountsTable(sources, manifest) {
         return flat;
     };
 
-    return { nonRetirement: flatten(nonRetirement), retirement: flatten(retirement) };
+    return { nonRetirement: flatten(nonRetirement), retirement: flatten(retirement), nonRetirementTotal, retirementTotal };
 }
 
 /**

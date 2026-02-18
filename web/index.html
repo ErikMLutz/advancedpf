@@ -865,6 +865,8 @@
                                     <h2 class="text-xl font-light mb-4"
                                         :style="`color: ${theme.classified.textSubtle};`">
                                         non-retirement
+                                        <span class="opacity-50 text-base ml-1"
+                                              x-text="`(${formatAccountCurrency(accountsData.nonRetirementTotal)})`"></span>
                                     </h2>
                                     <table class="w-full" style="table-layout: fixed;">
                                         <colgroup>
@@ -917,6 +919,8 @@
                                     <h2 class="text-xl font-light mb-4"
                                         :style="`color: ${theme.classified.textSubtle};`">
                                         retirement
+                                        <span class="opacity-50 text-base ml-1"
+                                              x-text="`(${formatAccountCurrency(accountsData.retirementTotal)})`"></span>
                                     </h2>
                                     <table class="w-full" style="table-layout: fixed;">
                                         <colgroup>
