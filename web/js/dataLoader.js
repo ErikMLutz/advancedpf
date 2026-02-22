@@ -8,7 +8,7 @@
  */
 async function loadCSV(path) {
     try {
-        const response = await fetch(path);
+        const response = await fetch(`${path}?t=${Date.now()}`);
         if (!response.ok) {
             throw new Error(`Failed to load ${path}: ${response.statusText}`);
         }
@@ -43,7 +43,7 @@ async function loadCSV(path) {
  * @returns {Promise<Array>} Normalized manifest rows
  */
 async function loadManifestYAML(path) {
-    const response = await fetch(path);
+    const response = await fetch(`${path}?t=${Date.now()}`);
     if (!response.ok) {
         throw new Error(`Failed to load ${path}: ${response.statusText}`);
     }

@@ -14,7 +14,7 @@ document.addEventListener('alpine:init', () => {
             classified: { ..._initial.classified }
         },
         settingsOpen: false,
-        verbose: false,
+        printMode: false,
         loading: true,
         loadingProgress: 0,
         netWorthData: null,
@@ -234,7 +234,6 @@ document.addEventListener('alpine:init', () => {
                         'netWorthChart',
                         this.netWorthData,
                         this.theme.classified,
-                        this.verbose,
                         this.netWorthData.categoryBreakdowns
                     );
                 }
@@ -251,7 +250,8 @@ document.addEventListener('alpine:init', () => {
                     createAssetAllocationChart(
                         'assetAllocationChart',
                         this.assetAllocationData,
-                        this.theme.classified
+                        this.theme.classified,
+                        this.printMode
                     );
                 }
 

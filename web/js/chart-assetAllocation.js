@@ -5,8 +5,9 @@
  * @param {string} canvasId - Canvas element ID
  * @param {Array} data - Asset allocation data with category, value, proportion
  * @param {Object} classified - Classified color scheme
+ * @param {boolean} printMode - When true, show labels for all slices (no threshold)
  */
-function createAssetAllocationChart(canvasId, data, classified) {
+function createAssetAllocationChart(canvasId, data, classified, printMode = false) {
     const ctx = document.getElementById(canvasId);
 
     // Destroy existing chart if it exists
@@ -28,6 +29,9 @@ function createAssetAllocationChart(canvasId, data, classified) {
         classified.chart5
     ];
     const colors = labels.map((_, i) => chartColors[i % chartColors.length]);
+
+    // Store args so print handlers can re-invoke with printMode toggled
+    window._assetAllocationArgs = { canvasId, data, classified };
 
     window.assetAllocationChart = new Chart(ctx, {
         type: 'pie',
@@ -55,7 +59,14 @@ function createAssetAllocationChart(canvasId, data, classified) {
                     display: false // Using HTML title instead
                 },
                 tooltip: {
-                    enabled: false  // Disabled since labels are shown on slices
+                    enabled: true,
+                    callbacks: {
+                        label: function(context) {
+                            const proportion = proportions[context.dataIndex];
+                            const value = context.parsed;
+                            return ` $${(value / 1000).toFixed(0)}k (${(proportion * 100).toFixed(0)}%)`;
+                        }
+                    }
                 },
                 datalabels: {
                     color: classified.textSubtle,
@@ -63,17 +74,19 @@ function createAssetAllocationChart(canvasId, data, classified) {
                         size: 11,
                         weight: 400
                     },
+                    display: printMode ? true : (context) => proportions[context.dataIndex] >= 0.05,
                     formatter: function(value, context) {
                         const label = context.chart.data.labels[context.dataIndex];
                         const proportion = proportions[context.dataIndex];
                         return `${label}\n$${(value / 1000).toFixed(0)}k\n${(proportion * 100).toFixed(0)}%`;
                     },
                     textAlign: 'center',
-                    anchor: 'end',     // Position anchor at edge of pie slice
-                    align: 'end',      // Align label away from center (outside)
-                    offset: 4          // Small offset from the edge
+                    anchor: 'end',
+                    align: 'end',
+                    offset: 4
                 }
             }
         }
     });
+
 }

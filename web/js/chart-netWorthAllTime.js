@@ -5,10 +5,9 @@
  * @param {string} canvasId - Canvas element ID
  * @param {Object} data - Chart data with months and values
  * @param {Object} classified - Classified color scheme
- * @param {boolean} verbose - Show detailed category breakdown in tooltip
- * @param {Object} categoryBreakdowns - Optional category breakdowns by month {month: {category: value}}
+ * @param {Object} categoryBreakdowns - Category breakdowns by month {month: {category: value}}
  */
-function createAllTimeNetWorthChart(canvasId, data, classified, verbose = false, categoryBreakdowns = null) {
+function createAllTimeNetWorthChart(canvasId, data, classified, categoryBreakdowns = null) {
     const ctx = document.getElementById(canvasId);
 
     // Destroy existing chart if it exists
@@ -65,12 +64,11 @@ function createAllTimeNetWorthChart(canvasId, data, classified, verbose = false,
                             const value = context.parsed.y;
                             const month = context.label;
 
-                            if (!verbose || !categoryBreakdowns || !categoryBreakdowns[month]) {
-                                // Simple mode: just show total
+                            if (!categoryBreakdowns || !categoryBreakdowns[month]) {
                                 return 'Total: $' + (value / 1000).toFixed(1) + 'k';
                             }
 
-                            // Verbose mode: show categorized breakdown
+                            // Show categorized breakdown
                             const breakdown = categoryBreakdowns[month];
                             const labels = ['Total: $' + (value / 1000).toFixed(1) + 'k', ''];
 
