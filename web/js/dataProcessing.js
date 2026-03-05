@@ -640,7 +640,7 @@ function computeAccountsTable(sources, manifest) {
         rows.forEach(row => {
             flat.push({ account: row.account, title: row.title, value: row.value, netValue: row.netValue, category: row.category, taxTreatment: row.taxTreatment, debtRows: row.debtRows, isSubRow: false });
             row.debtRows.forEach(debt => {
-                flat.push({ account: debt.account, title: debt.title, value: debt.value, netValue: debt.value, category: 'mortgage', taxTreatment: 'taxable', debtRows: [], isSubRow: true });
+                flat.push({ account: debt.account, title: debt.title, value: debt.value, netValue: debt.value, category: 'debt', taxTreatment: 'taxable', debtRows: [], isSubRow: true });
             });
         });
         return flat;

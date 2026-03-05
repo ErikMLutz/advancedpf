@@ -688,7 +688,7 @@
                     <div class="mb-4" x-show="!hasError">
                         <h2 class="text-4xl font-light mb-1"
                             :style="`color: ${theme ? theme.classified.text : textColor};`">
-                            Net Worth
+                            Net Worth<span x-show="netWorthData" x-text="netWorthData ? ' \u2014 $' + (netWorthData.values[netWorthData.values.length - 1] / 1000).toFixed(1) + 'k' : ''" class="text-2xl font-light" :style="`color: ${theme ? theme.classified.textSubtle : textColor};`"></span>
                         </h2>
                         <p class="text-xl font-light"
                            :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
