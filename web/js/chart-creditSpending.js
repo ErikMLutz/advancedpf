@@ -92,7 +92,7 @@ function createCreditSpendingChart(canvasId, data, classified) {
                         label: function(context) {
                             const value = context.parsed.y;
                             if (value === null) return null;
-                            return `${context.dataset.label}: $${(value / 1000).toFixed(1)}k`;
+                            return `${context.dataset.label}: $${fmtK(value, 1)}k`;
                         }
                     }
                 }
@@ -111,7 +111,7 @@ function createCreditSpendingChart(canvasId, data, classified) {
                         color: classified.textSubtle,
                         font: { size: 11, weight: 300 },
                         callback: function(value) {
-                            return '$' + (value / 1000).toFixed(0) + 'k';
+                            return '$' + fmtK(value, 0) + 'k';
                         }
                     },
                     grid: { color: classified.backgroundAlt }

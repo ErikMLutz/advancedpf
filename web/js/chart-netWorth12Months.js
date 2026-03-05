@@ -83,12 +83,12 @@ function create12MonthNetWorthChart(canvasId, data, classified) {
                             const value = context.parsed.y;
 
                             if (datasetLabel === 'last year') {
-                                return 'last year: $' + (value / 1000).toFixed(0) + 'k';
+                                return 'last year: $' + fmtK(value, 0) + 'k';
                             } else {
                                 // For change, show this year's total value (stacked)
                                 const lastYearValue = context.chart.data.datasets[0].data[context.dataIndex];
                                 const thisYearValue = lastYearValue + value;
-                                return 'this year: $' + (thisYearValue / 1000).toFixed(0) + 'k';
+                                return 'this year: $' + fmtK(thisYearValue, 0) + 'k';
                             }
                         },
                         footer: function(context) {
@@ -96,7 +96,7 @@ function create12MonthNetWorthChart(canvasId, data, classified) {
                             const change = context[1] ? context[1].parsed.y : 0;
                             if (change !== 0) {
                                 const sign = change > 0 ? '+' : '';
-                                return '\nchange: ' + sign + '$' + (change / 1000).toFixed(0) + 'k';
+                                return '\nchange: ' + sign + '$' + fmtK(change, 0) + 'k';
                             }
                             return '';
                         }
@@ -135,7 +135,7 @@ function create12MonthNetWorthChart(canvasId, data, classified) {
                             weight: 300
                         },
                         callback: function(value) {
-                            return '$' + (value / 1000).toFixed(0) + 'k';
+                            return '$' + fmtK(value, 0) + 'k';
                         }
                     },
                     grid: {

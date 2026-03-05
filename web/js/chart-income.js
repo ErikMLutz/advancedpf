@@ -48,7 +48,7 @@ function createIncomeChart(canvasId, data, classified) {
                     callbacks: {
                         label: function(context) {
                             const value = context.parsed.y;
-                            return 'Income: $' + (value / 1000).toFixed(1) + 'k';
+                            return 'Income: $' + fmtK(value, 1) + 'k';
                         }
                     }
                 }
@@ -74,7 +74,7 @@ function createIncomeChart(canvasId, data, classified) {
                             weight: 300
                         },
                         callback: function(value) {
-                            return '$' + (value / 1000).toFixed(0) + 'k';
+                            return '$' + fmtK(value, 0) + 'k';
                         }
                     },
                     grid: {

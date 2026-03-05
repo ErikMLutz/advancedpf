@@ -59,3 +59,11 @@ const CONFIG = {
         scale: 2  // Higher quality
     }
 };
+
+// Format a dollar value as $X,XXX.Xk (divided by 1000, with commas)
+function fmtK(value, decimals = 1) {
+    const k = (value / 1000).toFixed(decimals);
+    const parts = k.split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.join('.');
+}

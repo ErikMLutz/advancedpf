@@ -101,11 +101,11 @@ function createTaxesChart(canvasId, data, classified, effectiveRates = []) {
                         label: function(context) {
                             const value = context.parsed.y;
                             if (!value) return null;
-                            return `${context.dataset.label}: $${(value / 1000).toFixed(1)}k`;
+                            return `${context.dataset.label}: $${fmtK(value, 1)}k`;
                         },
                         footer: function(items) {
                             const total = items.reduce((sum, item) => sum + item.parsed.y, 0);
-                            return `Total: $${(total / 1000).toFixed(1)}k`;
+                            return `Total: $${fmtK(total, 1)}k`;
                         }
                     }
                 }
@@ -125,7 +125,7 @@ function createTaxesChart(canvasId, data, classified, effectiveRates = []) {
                         color: classified.textSubtle,
                         font: { size: 11, weight: 300 },
                         callback: function(value) {
-                            return '$' + (value / 1000).toFixed(0) + 'k';
+                            return '$' + fmtK(value, 0) + 'k';
                         }
                     },
                     grid: { color: classified.backgroundAlt }

@@ -63,7 +63,7 @@ function createRetirementTaxAllocationChart(canvasId, data, classified) {
                     formatter: function(value, context) {
                         const label = context.chart.data.labels[context.dataIndex];
                         const proportion = proportions[context.dataIndex];
-                        return `${label}\n$${(value / 1000).toFixed(0)}k\n${(proportion * 100).toFixed(0)}%`;
+                        return `${label}\n$${fmtK(value, 0)}k\n${(proportion * 100).toFixed(0)}%`;
                     },
                     textAlign: 'center',
                     anchor: 'end',

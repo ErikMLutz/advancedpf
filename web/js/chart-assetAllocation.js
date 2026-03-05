@@ -64,7 +64,7 @@ function createAssetAllocationChart(canvasId, data, classified, printMode = fals
                         label: function(context) {
                             const proportion = proportions[context.dataIndex];
                             const value = context.parsed;
-                            return ` $${(value / 1000).toFixed(0)}k (${(proportion * 100).toFixed(0)}%)`;
+                            return ` $${fmtK(value, 0)}k (${(proportion * 100).toFixed(0)}%)`;
                         }
                     }
                 },
@@ -78,7 +78,7 @@ function createAssetAllocationChart(canvasId, data, classified, printMode = fals
                     formatter: function(value, context) {
                         const label = context.chart.data.labels[context.dataIndex];
                         const proportion = proportions[context.dataIndex];
-                        return `${label}\n$${(value / 1000).toFixed(0)}k\n${(proportion * 100).toFixed(0)}%`;
+                        return `${label}\n$${fmtK(value, 0)}k\n${(proportion * 100).toFixed(0)}%`;
                     },
                     textAlign: 'center',
                     anchor: 'end',

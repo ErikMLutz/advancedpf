@@ -65,12 +65,12 @@ function createAllTimeNetWorthChart(canvasId, data, classified, categoryBreakdow
                             const month = context.label;
 
                             if (!categoryBreakdowns || !categoryBreakdowns[month]) {
-                                return 'Total: $' + (value / 1000).toFixed(1) + 'k';
+                                return 'Total: $' + fmtK(value, 1) + 'k';
                             }
 
                             // Show categorized breakdown
                             const breakdown = categoryBreakdowns[month];
-                            const labels = ['Total: $' + (value / 1000).toFixed(1) + 'k', ''];
+                            const labels = ['Total: $' + fmtK(value, 1) + 'k', ''];
 
                             // Add each category dynamically
                             Object.entries(breakdown)
@@ -78,7 +78,7 @@ function createAllTimeNetWorthChart(canvasId, data, classified, categoryBreakdow
                                 .sort((a, b) => b[1] - a[1]) // Sort by value descending
                                 .forEach(([category, categoryValue]) => {
                                     const formattedCategory = category.charAt(0).toUpperCase() + category.slice(1);
-                                    labels.push(formattedCategory + ': $' + (categoryValue / 1000).toFixed(1) + 'k');
+                                    labels.push(formattedCategory + ': $' + fmtK(categoryValue, 1) + 'k');
                                 });
 
                             return labels;
@@ -118,7 +118,7 @@ function createAllTimeNetWorthChart(canvasId, data, classified, categoryBreakdow
                             weight: 300
                         },
                         callback: function(value) {
-                            return '$' + (value / 1000).toFixed(0) + 'k';
+                            return '$' + fmtK(value, 0) + 'k';
                         }
                     },
                     grid: {
