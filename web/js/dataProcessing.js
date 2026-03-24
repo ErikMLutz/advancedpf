@@ -110,7 +110,7 @@ function forwardFill(data) {
 }
 
 /**
- * Helper: Calculate rolling average
+ * Helper: Calculate trailing rolling average
  * @param {Array<number>} values - Array of values
  * @param {number} window - Window size
  * @returns {Array<number|null>} Rolling averages (null for insufficient data)
@@ -120,6 +120,22 @@ function rollingAverage(values, window = 6) {
         if (i < window - 1) return null;
         const slice = values.slice(i - window + 1, i + 1);
         return slice.reduce((a, b) => a + b, 0) / window;
+    });
+}
+
+/**
+ * Helper: Calculate centered rolling average
+ * Returns null at edges where the full window isn't available on both sides.
+ * @param {Array<number>} values - Array of values
+ * @param {number} window - Total window size (half = floor(window/2) on each side)
+ * @returns {Array<number|null>} Rolling averages (null for edge points)
+ */
+function rollingAverageCentered(values, window = 12) {
+    const half = Math.floor(window / 2);
+    return values.map((_, i) => {
+        if (i < half || i + half >= values.length) return null;
+        const slice = values.slice(i - half, i + half + 1);
+        return slice.reduce((a, b) => a + b, 0) / slice.length;
     });
 }
 
@@ -685,6 +701,141 @@ function computeRetirementTaxAllocation(sources, manifest) {
             proportion: total > 0 ? value / total : 0
         }))
         .sort((a, b) => b.value - a.value);
+}
+
+/**
+ * Compute estimated yearly rate of return for investment categories.
+ * Return % = (end value - start value - savings contributions) / |start value|
+ * Categories: 'retirement securities', 'investment property', 'securities'
+ * Investment property values are netted against linked debt.
+ * Starts from the second year present in the data (needs prior year as baseline).
+ * @param {Array} sources - Array of SnapshotData sources (cash, property, debt, securities)
+ * @param {Array} manifest - Manifest data with account metadata
+ * @param {Array} savingsRows - Raw savings CSV rows
+ * @returns {{ years: string[], categories: string[], data: Object }}
+ */
+function computePortfolioPerformance(sources, manifest, savingsRows) {
+    const TARGET_CATEGORIES = ['retirement securities', 'investment property', 'securities'];
+
+    // Build per-account timeline: account → [{month, value}] sorted ascending
+    // Last snapshot within each month wins
+    const accountSnaps = {};
+    sources.forEach(source => {
+        source.data.forEach(row => {
+            if (!accountSnaps[row.account]) accountSnaps[row.account] = {};
+            const existing = accountSnaps[row.account][row.month];
+            if (!existing || row.date >= existing.date) {
+                accountSnaps[row.account][row.month] = { date: row.date, value: row.value };
+            }
+        });
+    });
+    const accountTimeline = {};
+    Object.entries(accountSnaps).forEach(([account, monthMap]) => {
+        accountTimeline[account] = Object.entries(monthMap)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([month, { value }]) => ({ month, value }));
+    });
+
+    // Forward-fill: last known value for an account at or before targetMonth
+    function valueAt(account, targetMonth) {
+        const timeline = accountTimeline[account];
+        if (!timeline || timeline.length === 0) return null;
+        let result = null;
+        for (const row of timeline) {
+            if (row.month <= targetMonth) result = row.value;
+            else break;
+        }
+        return result;
+    }
+
+    // Debt linkage: propertyAccount → [debtAccount, ...]
+    const linkedDebt = {};
+    manifest.forEach(meta => {
+        if (meta.type === 'debt' && meta.debt_applies_to) {
+            if (!linkedDebt[meta.debt_applies_to]) linkedDebt[meta.debt_applies_to] = [];
+            linkedDebt[meta.debt_applies_to].push(meta.account);
+        }
+    });
+
+    // Savings index: year → account → net contributions
+    const savingsIndex = {};
+    savingsRows.forEach(row => {
+        const y = String(row.year);
+        if (!savingsIndex[y]) savingsIndex[y] = {};
+        savingsIndex[y][row.account] = (savingsIndex[y][row.account] || 0) + row.amount;
+    });
+
+    // Years bounded by savings data — only show years we have savings records for
+    const savingsYearsSet = new Set(savingsRows.map(r => String(r.year)));
+    if (savingsYearsSet.size === 0) {
+        return { years: [], categories: TARGET_CATEGORIES, data: {} };
+    }
+    const sortedYears = [...savingsYearsSet].sort();
+    if (sortedYears.length < 1) {
+        return { years: [], categories: TARGET_CATEGORIES, data: {} };
+    }
+
+    const resultYears = [];
+    const resultData = {};
+    TARGET_CATEGORIES.forEach(c => { resultData[c] = []; });
+
+    for (let i = 1; i < sortedYears.length; i++) {
+        const year = sortedYears[i];
+        const prevYear = String(parseInt(year) - 1);
+        const startMonth = `${prevYear}-12`;
+        const endMonth = `${year}-12`;
+        const midYear = `${year}-06`;
+
+        // Categorize non-debt accounts using mid-year context for time-aware properties
+        const categoryAccounts = {};
+        TARGET_CATEGORIES.forEach(c => { categoryAccounts[c] = []; });
+        manifest.forEach(meta => {
+            if (meta.type === 'debt') return;
+            const cat = categorizeAccount({
+                ...meta,
+                primary_residence: isPrimaryResidence(meta, midYear),
+                investment_property: isInvestmentProperty(meta, midYear)
+            });
+            if (TARGET_CATEGORIES.includes(cat)) categoryAccounts[cat].push(meta.account);
+        });
+
+        resultYears.push(year);
+
+        TARGET_CATEGORIES.forEach(category => {
+            const accounts = categoryAccounts[category];
+            let startTotal = 0, endTotal = 0, contributions = 0;
+            let hasData = false;
+
+            accounts.forEach(account => {
+                const sv = valueAt(account, startMonth);
+                const ev = valueAt(account, endMonth);
+                if (sv === null && ev === null) return;
+                hasData = true;
+                startTotal += sv || 0;
+                endTotal += ev || 0;
+
+                // Net linked debt for investment property (debt values are negative)
+                if (category === 'investment property') {
+                    (linkedDebt[account] || []).forEach(debtAcc => {
+                        startTotal += valueAt(debtAcc, startMonth) || 0;
+                        endTotal += valueAt(debtAcc, endMonth) || 0;
+                    });
+                }
+
+                contributions += savingsIndex[year]?.[account] || 0;
+            });
+
+            if (!hasData || startTotal === 0) {
+                resultData[category].push(null);
+                return;
+            }
+
+            const returnPct = (endTotal - startTotal - contributions) / Math.abs(startTotal) * 100;
+            resultData[category].push(Math.round(returnPct * 10) / 10);
+        });
+    }
+
+    return { years: resultYears, categories: TARGET_CATEGORIES, data: resultData };
 }
 
 /**

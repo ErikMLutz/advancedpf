@@ -89,6 +89,10 @@ Both provide:
 ### Taxes
 - **rate** (`taxesChart`): Stacked bar — federal / state / social security / medicare. Effective rate % label above each bar.
 
+### Performance
+- **net worth growth** (`netWorthGrowthChart`): Line chart, YoY % change by month + dashed 12-month moving avg. Starts 1 year after earliest net worth data.
+- **portfolio performance** (`portfolioPerformanceChart`): Grouped bar chart by year. Estimated rate of return for `retirement securities`, `investment property`, `securities`. Formula: (end − start − contributions) / |start|. Investment property netted against linked debt.
+
 ## Common Tasks
 
 ### Add a New Chart

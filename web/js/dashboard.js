@@ -20,6 +20,8 @@ document.addEventListener('alpine:init', () => {
         netWorthData: null,
         netWorth12MonthsData: null,
         assetAllocationData: null,
+        netWorthGrowthData: null,
+        portfolioPerformanceData: null,
         incomeData: null,
         creditSpendingData: null,
         creditByYearData: null,
@@ -179,6 +181,20 @@ document.addEventListener('alpine:init', () => {
                     categoryBreakdowns: categoryBreakdowns
                 };
 
+                // Compute YoY net worth growth % by month
+                const monthValueMap = {};
+                filteredData.forEach(d => { monthValueMap[d.month] = d.value; });
+                this.netWorthGrowthData = filteredData
+                    .map(d => {
+                        const [year, mon] = d.month.split('-');
+                        const prevMonth = `${parseInt(year) - 1}-${mon}`;
+                        if (!(prevMonth in monthValueMap)) return null;
+                        const prevValue = monthValueMap[prevMonth];
+                        if (prevValue === 0) return null;
+                        return { month: d.month, growth: (d.value - prevValue) / prevValue * 100 };
+                    })
+                    .filter(d => d !== null);
+
                 // Calculate 12-month net worth with year-over-year comparison
                 this.netWorth12MonthsData = computeValueOverLast12Months(sources);
 
@@ -210,6 +226,9 @@ document.addEventListener('alpine:init', () => {
 
                 // Savings by year and category
                 this.savingsData = computeSavingsAllocation(rawData.savings, rawData.manifest);
+
+                // Portfolio performance by category (estimated yearly rate of return)
+                this.portfolioPerformanceData = computePortfolioPerformance(sources, rawData.manifest, rawData.savings);
 
                 // Retirement accounts by tax treatment
                 this.retirementTaxData = computeRetirementTaxAllocation(sources, rawData.manifest);
@@ -271,42 +290,6 @@ document.addEventListener('alpine:init', () => {
                     );
                 }
 
-                if (this.incomeData && this.creditByYearData && this.savingsData && this.dataLoadError === null) {
-                    const allocationData = (() => {
-                        const years = this.incomeData.years;
-                        const taxes = years.map((_, i) => {
-                            const income = this.incomeData.values[i];
-                            if (!income) return 0;
-                            const total = (this.incomeData.federalTax[i] || 0)
-                                + (this.incomeData.stateTax[i] || 0)
-                                + (this.incomeData.socialSecurity[i] || 0)
-                                + (this.incomeData.medicare[i] || 0);
-                            return total / income * 100;
-                        });
-                        const savings = years.map((year, i) => {
-                            const income = this.incomeData.values[i];
-                            if (!income) return 0;
-                            const yearIdx = this.savingsData.years.indexOf(year);
-                            if (yearIdx < 0) return 0;
-                            const positive = this.savingsData.datasets.reduce((s, ds) => s + (ds.data[yearIdx] || 0), 0);
-                            return positive / income * 100;
-                        });
-                        const credit = years.map((year, i) => {
-                            const income = this.incomeData.values[i];
-                            if (!income) return 0;
-                            // Values are negative (spending), negate to get positive %
-                            return -(this.creditByYearData[year] || 0) / income * 100;
-                        });
-                        return { years, taxes, savings, credit };
-                    })();
-
-                    createIncomeAllocationChart(
-                        'incomeAllocationChart',
-                        allocationData,
-                        this.theme.classified
-                    );
-                }
-
                 if (this.incomeData && this.dataLoadError === null) {
                     const effectiveRates = this.incomeData.years.map((_, i) => {
                         const income = this.incomeData.values[i];
@@ -356,6 +339,21 @@ document.addEventListener('alpine:init', () => {
                         this.savingsData,
                         this.theme.classified,
                         savingsRates
+                    );
+                }
+                if (this.netWorthGrowthData && this.netWorthGrowthData.length > 0 && this.dataLoadError === null) {
+                    createNetWorthGrowthChart(
+                        'netWorthGrowthChart',
+                        this.netWorthGrowthData,
+                        this.theme.classified
+                    );
+                }
+
+                if (this.portfolioPerformanceData && this.portfolioPerformanceData.years.length > 0 && this.dataLoadError === null) {
+                    createPortfolioPerformanceChart(
+                        'portfolioPerformanceChart',
+                        this.portfolioPerformanceData,
+                        this.theme.classified
                     );
                 }
             } catch (error) {

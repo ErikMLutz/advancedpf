@@ -43,6 +43,8 @@
     <script src="js/chart-savings.js"></script>
     <script src="js/chart-taxes.js"></script>
     <script src="js/chart-retirementTaxAllocation.js"></script>
+    <script src="js/chart-netWorthGrowth.js"></script>
+    <script src="js/chart-portfolioPerformance.js"></script>
 
     <!-- Dashboard component -->
     <script src="js/dashboard.js"></script>
@@ -784,7 +786,7 @@
                     <div class="w-full mb-8">
                         <h2 class="text-xl font-light mb-4"
                             :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
-                            total
+                            rate
                         </h2>
                         <div style="position: relative; height: 350px; width: 100%;">
                             <canvas id="savingsChart"></canvas>
@@ -804,7 +806,7 @@
                     <div class="w-full mb-8">
                         <h2 class="text-xl font-light mb-4"
                             :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
-                            total
+                            rate
                         </h2>
                         <div style="position: relative; height: 350px; width: 100%;">
                             <canvas id="taxesChart"></canvas>
@@ -947,6 +949,38 @@
                             </template>
                         </div>
                     </template>
+                </div>
+
+                <!-- Performance Section -->
+                <div id="performance-section" x-show="!hasError" class="w-full mt-16">
+                    <div class="mb-8">
+                        <h2 class="text-4xl font-light mb-1"
+                            :style="`color: ${theme ? theme.classified.text : textColor};`">
+                            Performance
+                        </h2>
+                    </div>
+
+                    <!-- Net Worth Growth Chart -->
+                    <div class="w-full mb-8">
+                        <h2 class="text-xl font-light mb-4"
+                            :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
+                            net worth growth
+                        </h2>
+                        <div style="position: relative; height: 300px; width: 100%;">
+                            <canvas id="netWorthGrowthChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Portfolio Performance Chart -->
+                    <div class="w-full mb-8">
+                        <h2 class="text-xl font-light mb-4"
+                            :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
+                            portfolio performance
+                        </h2>
+                        <div style="position: relative; height: 350px; width: 100%;">
+                            <canvas id="portfolioPerformanceChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

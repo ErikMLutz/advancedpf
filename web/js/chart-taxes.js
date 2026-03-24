@@ -105,7 +105,7 @@ function createTaxesChart(canvasId, data, classified, effectiveRates = []) {
                         },
                         footer: function(items) {
                             const total = items.reduce((sum, item) => sum + item.parsed.y, 0);
-                            return `Total: $${fmtK(total, 1)}k`;
+                            return `total: $${fmtK(total, 1)}k`;
                         }
                     }
                 }
