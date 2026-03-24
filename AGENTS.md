@@ -84,10 +84,10 @@ Both provide:
 - **credit card spending** (`creditSpendingChart`): Mixed — bars + 2 trailing avg lines
 
 ### Savings
-- **total** (`savingsChart`): Stacked bar by category; withdrawals shown as separate negative bar (`chartWarn` color). Savings rate % label above each bar.
+- **rate** (`savingsChart`): Stacked bar by category; withdrawals shown as separate negative bar (`chartWarn` color). Savings rate % label above each bar.
 
 ### Taxes
-- **total** (`taxesChart`): Stacked bar — federal / state / social security / medicare. Effective rate % label above each bar.
+- **rate** (`taxesChart`): Stacked bar — federal / state / social security / medicare. Effective rate % label above each bar.
 
 ## Common Tasks
 
