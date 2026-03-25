@@ -72,7 +72,16 @@ function createPortfolioPerformanceChart(canvasId, data, classified) {
                             const v = context.parsed.y;
                             if (v === null || v === undefined) return null;
                             const sign = v >= 0 ? '+' : '';
-                            return `${context.dataset.label}: ${sign}${v.toFixed(1)}%`;
+                            const category = context.dataset.label;
+                            const dbg = data.debug?.[category]?.[context.dataIndex];
+                            const fmt = n => '$' + Math.round(n).toLocaleString();
+                            const lines = [`${category}: ${sign}${v.toFixed(1)}%`];
+                            if (dbg) {
+                                lines.push(`  start: ${fmt(dbg.startTotal)}`);
+                                lines.push(`  end: ${fmt(dbg.endTotal)}`);
+                                lines.push(`  contributions: ${fmt(dbg.contributions)}`);
+                            }
+                            return lines;
                         }
                     }
                 },
