@@ -10,8 +10,9 @@
  * @param {string} canvasId - Canvas element ID
  * @param {{ years: string[], categories: string[], data: Object }} data
  * @param {Object} classified - Classified color scheme
+ * @param {Object|null} indexReturns - Optional map of year → S&P 500 annual return %
  */
-function createPortfolioPerformanceChart(canvasId, data, classified) {
+function createPortfolioPerformanceChart(canvasId, data, classified, indexReturns) {
     const ctx = document.getElementById(canvasId);
 
     if (window.portfolioPerformanceChart && typeof window.portfolioPerformanceChart.destroy === 'function') {
@@ -37,6 +38,24 @@ function createPortfolioPerformanceChart(canvasId, data, classified) {
         categoryPercentage: 0.8
     }));
 
+    if (indexReturns) {
+        datasets.push({
+            type: 'line',
+            label: 's&p 500',
+            data: data.years.map(y => indexReturns[y] ?? null),
+            borderColor: 'rgba(0,0,0,0)',
+            backgroundColor: 'rgba(0,0,0,0)',
+            borderWidth: 0,
+            showLine: false,
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            pointStyle: 'rectRot',
+            pointBackgroundColor: classified.accent,
+            pointBorderColor: 'rgba(0,0,0,0)',
+            datalabels: { display: false }
+        });
+    }
+
     window.portfolioPerformanceChart = new Chart(ctx, {
         type: 'bar',
         plugins: [ChartDataLabels],
@@ -57,7 +76,7 @@ function createPortfolioPerformanceChart(canvasId, data, classified) {
                         font: { size: 11, weight: 300 },
                         boxWidth: 12,
                         padding: 12,
-                        filter: item => data.data[item.text] && data.data[item.text].some(v => v !== null)
+                        filter: item => item.text === 's&p 500' || (data.data[item.text] && data.data[item.text].some(v => v !== null))
                     }
                 },
                 tooltip: {
@@ -73,6 +92,9 @@ function createPortfolioPerformanceChart(canvasId, data, classified) {
                             if (v === null || v === undefined) return null;
                             const sign = v >= 0 ? '+' : '';
                             const category = context.dataset.label;
+                            if (category === 's&p 500') {
+                                return `s&p 500: ${sign}${v.toFixed(1)}%`;
+                            }
                             const dbg = data.debug?.[category]?.[context.dataIndex];
                             const fmt = n => '$' + Math.round(n).toLocaleString();
                             const lines = [`${category}: ${sign}${v.toFixed(1)}%`];

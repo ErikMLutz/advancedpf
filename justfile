@@ -8,9 +8,15 @@ serve generate-sample-data="false":
         node scripts/generate-fake-data.js || exit 1
         echo ""
     fi
+    python3 scripts/fetch-index-returns.py
+    echo ""
     echo "Starting web server at http://localhost:8000"
     echo "Visit http://localhost:8000/web/"
     python3 -m http.server 8000
+
+# Fetch S&P 500 annual returns and write to web/data/sp500_returns.json
+fetch-index-returns:
+    python3 scripts/fetch-index-returns.py
 
 # Generate realistic fake data (prompts for confirmation if data/ exists)
 generate-fake-data:
