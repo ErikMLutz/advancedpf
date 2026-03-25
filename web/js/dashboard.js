@@ -21,6 +21,7 @@ document.addEventListener('alpine:init', () => {
         netWorth12MonthsData: null,
         assetAllocationData: null,
         netWorthGrowthData: null,
+        growthSkipMonths: 12,
         portfolioPerformanceData: null,
         incomeData: null,
         creditSpendingData: null,
@@ -342,9 +343,10 @@ document.addEventListener('alpine:init', () => {
                     );
                 }
                 if (this.netWorthGrowthData && this.netWorthGrowthData.length > 0 && this.dataLoadError === null) {
+                    const skip = Math.max(0, parseInt(this.growthSkipMonths) || 0);
                     createNetWorthGrowthChart(
                         'netWorthGrowthChart',
-                        this.netWorthGrowthData,
+                        this.netWorthGrowthData.slice(skip),
                         this.theme.classified
                     );
                 }

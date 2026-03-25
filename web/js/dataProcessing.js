@@ -777,10 +777,13 @@ function computePortfolioPerformance(sources, manifest, savingsRows) {
 
     const resultYears = [];
     const resultData = {};
-    TARGET_CATEGORIES.forEach(c => { resultData[c] = []; });
+    const resultDebug = {};
+    TARGET_CATEGORIES.forEach(c => { resultData[c] = []; resultDebug[c] = []; });
 
+    const currentYear = String(new Date().getFullYear());
     for (let i = 1; i < sortedYears.length; i++) {
         const year = sortedYears[i];
+        if (year === currentYear) continue;
         const prevYear = String(parseInt(year) - 1);
         const startMonth = `${prevYear}-12`;
         const endMonth = `${year}-12`;
@@ -805,37 +808,53 @@ function computePortfolioPerformance(sources, manifest, savingsRows) {
             const accounts = categoryAccounts[category];
             let startTotal = 0, endTotal = 0, contributions = 0;
             let hasData = false;
+            const accountRows = [];
 
             accounts.forEach(account => {
                 const sv = valueAt(account, startMonth);
                 const ev = valueAt(account, endMonth);
                 if (sv === null && ev === null) return;
                 hasData = true;
-                startTotal += sv || 0;
-                endTotal += ev || 0;
+                const accStart = sv || 0;
+                const accEnd = ev || 0;
+                let debtStart = 0, debtEnd = 0;
 
                 // Net linked debt for investment property (debt values are negative)
                 if (category === 'investment property') {
                     (linkedDebt[account] || []).forEach(debtAcc => {
-                        startTotal += valueAt(debtAcc, startMonth) || 0;
-                        endTotal += valueAt(debtAcc, endMonth) || 0;
+                        debtStart += valueAt(debtAcc, startMonth) || 0;
+                        debtEnd += valueAt(debtAcc, endMonth) || 0;
                     });
                 }
 
-                contributions += savingsIndex[year]?.[account] || 0;
+                const accContributions = savingsIndex[year]?.[account] || 0;
+                startTotal += accStart + debtStart;
+                endTotal += accEnd + debtEnd;
+                contributions += accContributions;
+
+                accountRows.push({
+                    account,
+                    start: accStart + debtStart,
+                    end: accEnd + debtEnd,
+                    contributions: accContributions
+                });
             });
 
             if (!hasData || startTotal === 0) {
                 resultData[category].push(null);
+                resultDebug[category].push(null);
                 return;
             }
 
-            const returnPct = (endTotal - startTotal - contributions) / Math.abs(startTotal) * 100;
+            const gain = endTotal - startTotal - contributions;
+            const avgTotal = (startTotal + endTotal) / 2;
+            const returnPct = gain / Math.abs(avgTotal) * 100;
             resultData[category].push(Math.round(returnPct * 10) / 10);
+            resultDebug[category].push({ startTotal, endTotal, contributions, gain, avgTotal, accountRows });
         });
     }
 
-    return { years: resultYears, categories: TARGET_CATEGORIES, data: resultData };
+    return { years: resultYears, categories: TARGET_CATEGORIES, data: resultData, debug: resultDebug };
 }
 
 /**
