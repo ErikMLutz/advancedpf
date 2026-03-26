@@ -147,6 +147,12 @@
                                         class="pb-3 px-2 text-lg font-light transition-colors">
                                     General
                                 </button>
+                                <button @click="activeTab = 'charts'"
+                                        :style="activeTab === 'charts' ? `color: ${theme.classified.text}; border-color: ${theme.classified.accent};` : `color: ${theme.classified.textSubtle};`"
+                                        :class="activeTab === 'charts' ? 'border-b-2' : ''"
+                                        class="pb-3 px-2 text-lg font-light transition-colors">
+                                    Charts
+                                </button>
                                 <button @click="activeTab = 'theme'"
                                         :style="activeTab === 'theme' ? `color: ${theme.classified.text}; border-color: ${theme.classified.accent};` : `color: ${theme.classified.textSubtle};`"
                                         :class="activeTab === 'theme' ? 'border-b-2' : ''"
@@ -174,6 +180,35 @@
                                                       class="inline-block h-4 w-4 transform rounded-full transition-transform">
                                                 </span>
                                             </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Charts Tab -->
+                                <div x-show="activeTab === 'charts'">
+                                    <div class="space-y-8">
+                                        <!-- Performance -->
+                                        <div>
+                                            <h3 class="text-lg font-light mb-4"
+                                                :style="`color: ${theme.classified.text};`">Performance</h3>
+                                            <div class="space-y-6 pl-4 border-l"
+                                                 :style="`border-color: ${theme.classified.backgroundAlt};`">
+                                                <!-- net worth growth -->
+                                                <div>
+                                                    <h4 class="text-sm font-light mb-3 opacity-70">net worth growth</h4>
+                                                    <div class="flex items-center justify-between">
+                                                        <div>
+                                                            <div class="font-light">Skip First Months</div>
+                                                            <div class="text-sm opacity-70">Exclude early months with large swings from the chart</div>
+                                                        </div>
+                                                        <input type="number" min="0" step="1"
+                                                               x-model.number="growthSkipMonths"
+                                                               @change="renderCharts()"
+                                                               class="w-20 text-center font-light"
+                                                               :style="`background: transparent; border: 1px solid ${theme.classified.backgroundAlt}; color: ${theme.classified.text}; border-radius: 4px; padding: 6px 8px;`">
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -962,22 +997,10 @@
 
                     <!-- Net Worth Growth Chart -->
                     <div class="w-full mb-8">
-                        <div class="flex items-center gap-4 mb-4">
-                            <h2 class="text-xl font-light"
-                                :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
-                                net worth growth
-                            </h2>
-                            <label class="flex items-center gap-2 text-sm font-light"
-                                   :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
-                                skip first
-                                <input type="number" min="0" step="1"
-                                       x-model.number="growthSkipMonths"
-                                       @change="renderCharts()"
-                                       class="w-16 text-center"
-                                       :style="`background: transparent; border: 1px solid ${theme ? theme.classified.backgroundAlt : '#888'}; color: ${theme ? theme.classified.text : textColor}; border-radius: 4px; padding: 2px 4px;`">
-                                months
-                            </label>
-                        </div>
+                        <h2 class="text-xl font-light mb-4"
+                            :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
+                            net worth growth
+                        </h2>
                         <div style="position: relative; height: 300px; width: 100%;">
                             <canvas id="netWorthGrowthChart"></canvas>
                         </div>

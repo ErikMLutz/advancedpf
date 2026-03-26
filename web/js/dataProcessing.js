@@ -820,10 +820,17 @@ function computePortfolioPerformance(sources, manifest, savingsRows) {
                 let debtStart = 0, debtEnd = 0;
 
                 // Net linked debt for investment property (debt values are negative)
+                let mortgagePaydown = 0;
+                const debtRows = [];
                 if (category === 'investment property') {
                     (linkedDebt[account] || []).forEach(debtAcc => {
-                        debtStart += valueAt(debtAcc, startMonth) || 0;
-                        debtEnd += valueAt(debtAcc, endMonth) || 0;
+                        const ds = valueAt(debtAcc, startMonth) || 0;
+                        const de = valueAt(debtAcc, endMonth) || 0;
+                        debtStart += ds;
+                        debtEnd += de;
+                        const paydown = de - ds;
+                        mortgagePaydown += paydown;
+                        debtRows.push({ account: debtAcc, start: ds, end: de, paydown });
                     });
                 }
 
@@ -836,7 +843,8 @@ function computePortfolioPerformance(sources, manifest, savingsRows) {
                     account,
                     start: accStart + debtStart,
                     end: accEnd + debtEnd,
-                    contributions: accContributions
+                    contributions: accContributions,
+                    debtRows: debtRows.length ? debtRows : null
                 });
             });
 

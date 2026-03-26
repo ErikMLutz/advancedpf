@@ -76,6 +76,7 @@ function createPortfolioPerformanceChart(canvasId, data, classified, indexReturn
                         font: { size: 11, weight: 300 },
                         boxWidth: 12,
                         padding: 12,
+                        usePointStyle: true,
                         filter: item => item.text === 's&p 500' || (data.data[item.text] && data.data[item.text].some(v => v !== null))
                     }
                 },
