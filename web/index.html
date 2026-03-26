@@ -872,6 +872,38 @@
                     </div>
                 </div>
 
+                <!-- Performance Section -->
+                <div id="performance-section" x-show="!hasError" class="w-full mt-16">
+                    <div class="mb-8">
+                        <h2 class="text-4xl font-light mb-1"
+                            :style="`color: ${theme ? theme.classified.text : textColor};`">
+                            Performance
+                        </h2>
+                    </div>
+
+                    <!-- Net Worth Growth Chart -->
+                    <div class="w-full mb-8">
+                        <h2 class="text-xl font-light mb-4"
+                            :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
+                            net worth growth
+                        </h2>
+                        <div style="position: relative; height: 300px; width: 100%;">
+                            <canvas id="netWorthGrowthChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Portfolio Performance Chart -->
+                    <div class="w-full mb-8">
+                        <h2 class="text-xl font-light mb-4"
+                            :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
+                            portfolio performance
+                        </h2>
+                        <div style="position: relative; height: 350px; width: 100%;">
+                            <canvas id="portfolioPerformanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Accounts Section -->
                 <div id="accounts-section" x-show="!hasError" class="w-full mt-16 mb-8">
                     <div class="mb-8">
@@ -985,38 +1017,6 @@
                         </div>
                     </template>
                 </div>
-
-                <!-- Performance Section -->
-                <div id="performance-section" x-show="!hasError" class="w-full mt-16">
-                    <div class="mb-8">
-                        <h2 class="text-4xl font-light mb-1"
-                            :style="`color: ${theme ? theme.classified.text : textColor};`">
-                            Performance
-                        </h2>
-                    </div>
-
-                    <!-- Net Worth Growth Chart -->
-                    <div class="w-full mb-8">
-                        <h2 class="text-xl font-light mb-4"
-                            :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
-                            net worth growth
-                        </h2>
-                        <div style="position: relative; height: 300px; width: 100%;">
-                            <canvas id="netWorthGrowthChart"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- Portfolio Performance Chart -->
-                    <div class="w-full mb-8">
-                        <h2 class="text-xl font-light mb-4"
-                            :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
-                            portfolio performance
-                        </h2>
-                        <div style="position: relative; height: 350px; width: 100%;">
-                            <canvas id="portfolioPerformanceChart"></canvas>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -1110,7 +1110,7 @@
             }
 
             /* Suggest page breaks before major sections */
-            #cashflow-section, #savings-section, #retirement-section, #accounts-section {
+            #cashflow-section, #taxes-section, #performance-section, #accounts-section {
                 page-break-before: always;
                 break-before: page;
                 padding-top: 4rem;
