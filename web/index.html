@@ -43,6 +43,7 @@
     <script src="js/chart-savings.js"></script>
     <script src="js/chart-taxes.js"></script>
     <script src="js/chart-retirementTaxAllocation.js"></script>
+    <script src="js/chart-retirementGrowth.js"></script>
     <script src="js/chart-netWorthGrowth.js"></script>
     <script src="js/chart-portfolioPerformance.js"></script>
 
@@ -198,13 +199,51 @@
                                                     <h4 class="text-sm font-light mb-3 opacity-70">net worth growth</h4>
                                                     <div class="flex items-center justify-between">
                                                         <div>
-                                                            <div class="font-light">Skip First Months</div>
-                                                            <div class="text-sm opacity-70">Exclude early months with large swings from the chart</div>
+                                                            <div class="font-light">Display since</div>
+                                                            <div class="text-sm opacity-70">Hide data before this year</div>
                                                         </div>
-                                                        <input type="number" min="0" step="1"
-                                                               x-model.number="growthSkipMonths"
+                                                        <input type="number" min="1900" max="2100" step="1"
+                                                               x-model.number="netWorthGrowthSince"
                                                                @change="renderCharts()"
-                                                               class="w-20 text-center font-light"
+                                                               class="w-24 text-center font-light"
+                                                               :style="`background: transparent; border: 1px solid ${theme.classified.backgroundAlt}; color: ${theme.classified.text}; border-radius: 4px; padding: 6px 8px;`">
+                                                    </div>
+                                                </div>
+                                                <!-- portfolio performance -->
+                                                <div>
+                                                    <h4 class="text-sm font-light mb-3 opacity-70">portfolio performance</h4>
+                                                    <div class="flex items-center justify-between">
+                                                        <div>
+                                                            <div class="font-light">Display since</div>
+                                                            <div class="text-sm opacity-70">Hide data before this year</div>
+                                                        </div>
+                                                        <input type="number" min="1900" max="2100" step="1"
+                                                               x-model.number="portfolioPerformanceSince"
+                                                               @change="renderCharts()"
+                                                               class="w-24 text-center font-light"
+                                                               :style="`background: transparent; border: 1px solid ${theme.classified.backgroundAlt}; color: ${theme.classified.text}; border-radius: 4px; padding: 6px 8px;`">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Savings -->
+                                        <div>
+                                            <h3 class="text-lg font-light mb-4"
+                                                :style="`color: ${theme.classified.text};`">Savings</h3>
+                                            <div class="space-y-6 pl-4 border-l"
+                                                 :style="`border-color: ${theme.classified.backgroundAlt};`">
+                                                <!-- savings rate -->
+                                                <div>
+                                                    <h4 class="text-sm font-light mb-3 opacity-70">rate</h4>
+                                                    <div class="flex items-center justify-between">
+                                                        <div>
+                                                            <div class="font-light">Display since</div>
+                                                            <div class="text-sm opacity-70">Hide data before this year</div>
+                                                        </div>
+                                                        <input type="number" min="1900" max="2100" step="1"
+                                                               x-model.number="savingsSince"
+                                                               @change="renderCharts()"
+                                                               class="w-24 text-center font-light"
                                                                :style="`background: transparent; border: 1px solid ${theme.classified.backgroundAlt}; color: ${theme.classified.text}; border-radius: 4px; padding: 6px 8px;`">
                                                     </div>
                                                 </div>
@@ -868,7 +907,15 @@
                                 <canvas id="retirementTaxAllocationChart"></canvas>
                             </div>
                         </div>
-                        <div></div>
+                        <div>
+                            <h2 class="text-xl font-light mb-4"
+                                :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
+                                contributions vs returns
+                            </h2>
+                            <div style="position: relative; height: 350px; width: 100%;">
+                                <canvas id="retirementGrowthChart"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

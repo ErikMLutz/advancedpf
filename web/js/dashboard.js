@@ -21,7 +21,9 @@ document.addEventListener('alpine:init', () => {
         netWorth12MonthsData: null,
         assetAllocationData: null,
         netWorthGrowthData: null,
-        growthSkipMonths: 12,
+        netWorthGrowthSince: 2016,
+        portfolioPerformanceSince: 2022,
+        savingsSince: 2022,
         portfolioPerformanceData: null,
         indexReturnsData: null,
         incomeData: null,
@@ -29,6 +31,7 @@ document.addEventListener('alpine:init', () => {
         creditByYearData: null,
         savingsData: null,
         retirementTaxData: null,
+        retirementGrowthData: null,
         accountsData: null,
         dataLoadError: null,
         allThemes: {},
@@ -245,6 +248,9 @@ document.addEventListener('alpine:init', () => {
                 // Retirement accounts by tax treatment
                 this.retirementTaxData = computeRetirementTaxAllocation(sources, rawData.manifest);
 
+                // Retirement growth: cumulative contributions vs total balance
+                this.retirementGrowthData = computeRetirementGrowth(sources, rawData.manifest, rawData.savings);
+
                 // Accounts table (current balances, split by retirement)
                 this.accountsData = computeAccountsTable(sources, rawData.manifest);
 
@@ -329,18 +335,38 @@ document.addEventListener('alpine:init', () => {
                     );
                 }
 
+                if (this.retirementGrowthData && this.dataLoadError === null) {
+                    createRetirementGrowthChart(
+                        'retirementGrowthChart',
+                        this.retirementGrowthData,
+                        this.theme.classified
+                    );
+                }
+
                 if (this.savingsData && this.dataLoadError === null) {
-                    // Compute savings rate per year = total savings / income
+                    const since = String(this.savingsSince || 0);
+                    const indices = this.savingsData.years
+                        .map((y, i) => ({ y, i }))
+                        .filter(({ y }) => y >= since);
+                    const filteredSavings = {
+                        years: indices.map(({ y }) => y),
+                        datasets: this.savingsData.datasets.map(ds => ({
+                            ...ds,
+                            data: indices.map(({ i }) => ds.data[i])
+                        })),
+                        withdrawals: indices.map(({ i }) => this.savingsData.withdrawals[i])
+                    };
+
                     const incomeByYear = {};
                     if (this.incomeData) {
                         this.incomeData.years.forEach((year, i) => {
                             incomeByYear[year] = this.incomeData.values[i];
                         });
                     }
-                    const savingsRates = this.savingsData.years.map((year, yearIdx) => {
+                    const savingsRates = filteredSavings.years.map((year, yearIdx) => {
                         const income = incomeByYear[year];
                         if (!income) return null;
-                        const positive = this.savingsData.datasets.reduce(
+                        const positive = filteredSavings.datasets.reduce(
                             (sum, ds) => sum + (ds.data[yearIdx] || 0), 0
                         );
                         return Math.round(positive / income * 100);
@@ -348,24 +374,48 @@ document.addEventListener('alpine:init', () => {
 
                     createSavingsChart(
                         'savingsChart',
-                        this.savingsData,
+                        filteredSavings,
                         this.theme.classified,
                         savingsRates
                     );
                 }
+
                 if (this.netWorthGrowthData && this.netWorthGrowthData.length > 0 && this.dataLoadError === null) {
-                    const skip = Math.max(0, parseInt(this.growthSkipMonths) || 0);
+                    const since = String(this.netWorthGrowthSince || 0);
+                    const filtered = this.netWorthGrowthData.filter(d => d.month.split('-')[0] >= since);
                     createNetWorthGrowthChart(
                         'netWorthGrowthChart',
-                        this.netWorthGrowthData.slice(skip),
+                        filtered,
                         this.theme.classified
                     );
                 }
 
                 if (this.portfolioPerformanceData && this.portfolioPerformanceData.years.length > 0 && this.dataLoadError === null) {
+                    const since = String(this.portfolioPerformanceSince || 0);
+                    const indices = this.portfolioPerformanceData.years
+                        .map((y, i) => ({ y, i }))
+                        .filter(({ y }) => y >= since);
+                    const filteredPerf = {
+                        years: indices.map(({ y }) => y),
+                        categories: this.portfolioPerformanceData.categories,
+                        data: Object.fromEntries(
+                            this.portfolioPerformanceData.categories.map(cat => [
+                                cat,
+                                indices.map(({ i }) => this.portfolioPerformanceData.data[cat][i])
+                            ])
+                        ),
+                        debug: this.portfolioPerformanceData.debug
+                            ? Object.fromEntries(
+                                this.portfolioPerformanceData.categories.map(cat => [
+                                    cat,
+                                    indices.map(({ i }) => this.portfolioPerformanceData.debug[cat]?.[i])
+                                ])
+                            )
+                            : undefined
+                    };
                     createPortfolioPerformanceChart(
                         'portfolioPerformanceChart',
-                        this.portfolioPerformanceData,
+                        filteredPerf,
                         this.theme.classified,
                         this.indexReturnsData
                     );

@@ -892,3 +892,87 @@ function computeAssetAllocation(sources, manifest) {
     // Sort by value descending
     return withProportions.sort((a, b) => b.value - a.value);
 }
+
+/**
+ * Compute retirement account growth: cumulative contributions vs total balance over time.
+ * Contributions (from savings.csv) are credited at December of each year.
+ * The gap between balance and cumulative contributions represents market gains.
+ * @param {Array} sources - Array of SnapshotData sources
+ * @param {Array} manifest - Manifest data with account metadata
+ * @param {Array} savingsRows - Raw savings CSV rows
+ * @returns {{ months: string[], balances: number[], cumulativeContributions: number[] } | null}
+ */
+function computeRetirementGrowth(sources, manifest, savingsRows) {
+    const retirementSet = new Set(
+        manifest
+            .filter(m => m.retirement === true && m.type !== 'debt')
+            .map(m => m.account)
+    );
+
+    // Latest snapshot value per retirement account per month
+    const rawByMonth = {};
+    sources.forEach(source => {
+        source.data.forEach(row => {
+            if (!retirementSet.has(row.account)) return;
+            if (!rawByMonth[row.month]) rawByMonth[row.month] = {};
+            const existing = rawByMonth[row.month][row.account];
+            if (!existing || row.date >= existing.date) {
+                rawByMonth[row.month][row.account] = { value: row.value, date: row.date };
+            }
+        });
+    });
+
+    const rawMonths = Object.keys(rawByMonth).sort();
+    if (rawMonths.length === 0) return null;
+
+    // Build complete month range and forward-fill balances
+    const [fy, fm] = rawMonths[0].split('-').map(Number);
+    const [ly, lm] = rawMonths[rawMonths.length - 1].split('-').map(Number);
+    const months = [];
+    for (let y = fy, m = fm; y < ly || (y === ly && m <= lm); ) {
+        months.push(`${y}-${String(m).padStart(2, '0')}`);
+        if (++m > 12) { m = 1; y++; }
+    }
+
+    // Sum accounts per month, forward-filling with last known value per account
+    const lastKnown = {};
+    const balances = months.map(month => {
+        if (rawByMonth[month]) {
+            Object.entries(rawByMonth[month]).forEach(([acct, e]) => {
+                lastKnown[acct] = e.value;
+            });
+        }
+        return Object.values(lastKnown).reduce((sum, v) => sum + v, 0);
+    });
+
+    // Cumulative retirement contributions by year (positive only, retirement accounts only)
+    const contribByYear = {};
+    savingsRows.forEach(row => {
+        if (row.amount <= 0) return;
+        const meta = manifest.find(m => m.account === row.account);
+        if (!meta || !meta.retirement) return;
+        const year = String(row.year);
+        contribByYear[year] = (contribByYear[year] || 0) + row.amount;
+    });
+
+    // Running cumulative per month: credit year Y contributions at December of year Y
+    const sortedContribYears = Object.keys(contribByYear).sort();
+    let running = 0;
+    // Pre-credit any years that ended before our data starts
+    sortedContribYears.forEach(year => {
+        if (year < String(fy) || (year === String(fy) && fm > 12)) {
+            running += contribByYear[year];
+        }
+    });
+
+    const cumulativeContributions = months.map(month => {
+        const [year, mon] = month.split('-');
+        if (mon === '12' && contribByYear[year]) {
+            running += contribByYear[year];
+            delete contribByYear[year]; // prevent double-counting
+        }
+        return running;
+    });
+
+    return { months, balances, cumulativeContributions };
+}
