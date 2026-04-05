@@ -976,3 +976,48 @@ function computeRetirementGrowth(sources, manifest, savingsRows) {
 
     return { months, balances, cumulativeContributions };
 }
+
+/**
+ * Compute latest positions data split by retirement vs non-retirement.
+ * Forward-fills per (account, position): the last known value is treated as current.
+ * @param {Array} rawPositions - Raw positions CSV rows ({date, account, position, value})
+ * @param {Array} manifest - Manifest data with account metadata
+ * @returns {{ retirement: Array<{label, value}>, nonRetirement: Array<{label, value}> }}
+ */
+function computePositionsData(rawPositions, manifest) {
+    if (!rawPositions || rawPositions.length === 0) {
+        return { retirement: [], nonRetirement: [] };
+    }
+
+    const manifestMap = Object.fromEntries(manifest.map(m => [m.account, m]));
+
+    // Group by account+position; take the latest snapshot per series (forward-fill)
+    const grouped = groupBy(rawPositions, r => `${r.account}|||${r.position}`);
+    const retirementMap = {};
+    const nonRetirementMap = {};
+
+    for (const [key, rows] of grouped) {
+        const sepIdx = key.indexOf('|||');
+        const account = key.substring(0, sepIdx);
+        const position = key.substring(sepIdx + 3);
+
+        // Latest row = forward-filled current value
+        const sorted = [...rows].sort((a, b) => a.date - b.date);
+        const latest = sorted[sorted.length - 1];
+        if (!latest || latest.value <= 0) continue;
+
+        const meta = manifestMap[account];
+        const isRetirement = meta?.retirement ?? false;
+        const target = isRetirement ? retirementMap : nonRetirementMap;
+        target[position] = (target[position] || 0) + latest.value;
+    }
+
+    const toArray = (map) => Object.entries(map)
+        .map(([label, value]) => ({ label, value }))
+        .sort((a, b) => b.value - a.value);
+
+    return {
+        retirement: toArray(retirementMap),
+        nonRetirement: toArray(nonRetirementMap)
+    };
+}

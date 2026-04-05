@@ -227,6 +227,37 @@ function generateSavingsData() {
     return data;
 }
 
+// Generate positions data (snapshot of holdings per account, two snapshots ~1yr apart)
+function generatePositionsData() {
+    const positions = [
+        { account: '/fidelity/401k', position: 'FXAIX', baseValue: 28000 },
+        { account: '/fidelity/401k', position: 'VBTLX', baseValue: 14000 },
+        { account: '/fidelity/401k', position: 'FSMDX', baseValue: 8000 },
+        { account: '/fidelity/roth_ira', position: 'FZROX', baseValue: 10000 },
+        { account: '/fidelity/roth_ira', position: 'FZILX', baseValue: 5000 },
+        { account: '/fidelity/brokerage', position: 'FSKAX', baseValue: 18000 },
+        { account: '/fidelity/brokerage', position: 'FSPSX', baseValue: 9000 },
+        { account: '/fidelity/brokerage', position: 'FXNAX', baseValue: 3000 },
+    ];
+
+    const data = [];
+    for (const snap of [12, 0]) {
+        const date = monthsAgo(snap);
+        const growthFactor = snap === 12 ? 0.88 : 1.0;
+        for (const pos of positions) {
+            const noise = 1 + (Math.random() * 0.06 - 0.03);
+            data.push({
+                date: formatDate(date),
+                account: pos.account,
+                position: pos.position,
+                value: Math.round(pos.baseValue * growthFactor * noise)
+            });
+        }
+    }
+
+    return data;
+}
+
 // Generate manifest as YAML
 function generateManifestYAML() {
     return `accounts:
@@ -333,7 +364,8 @@ async function main() {
         'securities.csv': generateSecuritiesData(),
         'credit.csv': generateCreditData(),
         'income.csv': generateIncomeData(),
-        'savings.csv': generateSavingsData()
+        'savings.csv': generateSavingsData(),
+        'positions.csv': generatePositionsData()
     };
 
     Object.entries(csvDatasets).forEach(([filename, data]) => {

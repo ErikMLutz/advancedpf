@@ -20,6 +20,9 @@
     <!-- Chart.js Datalabels Plugin (for pie chart labels) -->
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 
+    <!-- Chart.js Treemap Plugin (for positions charts) -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@3/dist/chartjs-chart-treemap.min.js"></script>
+
     <!-- Papa Parse (CSV parsing) -->
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
@@ -46,6 +49,7 @@
     <script src="js/chart-retirementGrowth.js"></script>
     <script src="js/chart-netWorthGrowth.js"></script>
     <script src="js/chart-portfolioPerformance.js"></script>
+    <script src="js/chart-positions.js"></script>
 
     <!-- Dashboard component -->
     <script src="js/dashboard.js"></script>
@@ -949,6 +953,48 @@
                             <canvas id="portfolioPerformanceChart"></canvas>
                         </div>
                     </div>
+
+                </div>
+
+                <!-- Positions Section -->
+                <div id="positions-section" x-show="!hasError" class="w-full mt-16">
+                    <div class="mb-8">
+                        <h2 class="text-4xl font-light mb-1"
+                            :style="`color: ${theme ? theme.classified.text : textColor};`">
+                            Positions
+                        </h2>
+                    </div>
+                    <!-- Overall exposure -->
+                    <div class="w-full mb-8">
+                        <h2 class="text-xl font-light mb-4"
+                            :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
+                            overall
+                        </h2>
+                        <div style="position: relative; height: 350px; width: 100%;">
+                            <canvas id="allPositionsChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-6" style="height: 350px;">
+                        <div class="flex-1 flex flex-col">
+                            <h2 class="text-xl font-light mb-4"
+                                :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
+                                retirement
+                            </h2>
+                            <div style="position: relative; flex: 1;">
+                                <canvas id="retirementPositionsChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="flex-1 flex flex-col">
+                            <h2 class="text-xl font-light mb-4"
+                                :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
+                                non-retirement
+                            </h2>
+                            <div style="position: relative; flex: 1;">
+                                <canvas id="nonRetirementPositionsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Accounts Section -->
@@ -1157,7 +1203,7 @@
             }
 
             /* Suggest page breaks before major sections */
-            #cashflow-section, #taxes-section, #performance-section, #accounts-section {
+            #cashflow-section, #taxes-section, #performance-section, #positions-section, #accounts-section {
                 page-break-before: always;
                 break-before: page;
                 padding-top: 4rem;

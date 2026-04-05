@@ -3,37 +3,25 @@
 
 Output format: { "YYYY": annual_yoy_pct, ... }
 Computed as December-to-December % change.
+
+Requires: pip install yfinance
 """
 
 import json
 import os
 import sys
-import urllib.request
-from datetime import datetime, timezone
 
 OUTPUT = os.path.join(os.path.dirname(__file__), '..', 'web', 'data', 'sp500_returns.json')
-URL = 'https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?interval=1mo&range=10y'
 START_YEAR = 2020
 
 
-def fetch():
-    req = urllib.request.Request(URL, headers={'User-Agent': 'Mozilla/5.0'})
-    with urllib.request.urlopen(req, timeout=10) as resp:
-        return json.loads(resp.read())
+def compute_annual_returns(df):
+    # Flatten MultiIndex columns if present (yfinance >= 0.2.38 returns MultiIndex)
+    if isinstance(df.columns, __import__('pandas').MultiIndex):
+        df.columns = df.columns.get_level_values(0)
 
-
-def compute_annual_returns(payload):
-    result = payload['chart']['result'][0]
-    timestamps = result['timestamp']
-    closes = result['indicators']['adjclose'][0]['adjclose']
-
-    dec_close = {}
-    for ts, close in zip(timestamps, closes):
-        if close is None:
-            continue
-        d = datetime.fromtimestamp(ts, tz=timezone.utc)
-        if d.month == 12:
-            dec_close[d.year] = close
+    closes = df['Close']
+    dec_close = {dt.year: float(val) for dt, val in closes.items() if dt.month == 12}
 
     returns = {}
     for year in sorted(dec_close):
@@ -48,17 +36,20 @@ def compute_annual_returns(payload):
 
 
 def main():
+    import yfinance as yf
+
     print('Fetching S&P 500 annual returns...')
-    try:
-        payload = fetch()
-        returns = compute_annual_returns(payload)
-        os.makedirs(os.path.dirname(os.path.abspath(OUTPUT)), exist_ok=True)
-        with open(OUTPUT, 'w') as f:
-            json.dump(returns, f, indent=2)
-        print(f'  wrote {len(returns)} years to web/data/sp500_returns.json')
-    except Exception as e:
-        print(f'  warning: could not fetch index data ({e}), skipping', file=sys.stderr)
+    df = yf.download('^GSPC', period='10y', interval='1mo', auto_adjust=True, progress=False)
+    returns = compute_annual_returns(df)
+    os.makedirs(os.path.dirname(os.path.abspath(OUTPUT)), exist_ok=True)
+    with open(OUTPUT, 'w') as f:
+        json.dump(returns, f, indent=2)
+    print(f'  wrote {len(returns)} years to web/data/sp500_returns.json')
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f'error: {e}', file=sys.stderr)
+        sys.exit(1)
