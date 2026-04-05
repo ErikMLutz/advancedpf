@@ -62,7 +62,7 @@ function createNetWorthGrowthChart(canvasId, data, classified) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            interaction: { mode: 'nearest', intersect: false },
+            interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: {
                     display: true,
