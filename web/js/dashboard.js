@@ -34,6 +34,7 @@ document.addEventListener('alpine:init', () => {
         retirementGrowthData: null,
         positionsData: null,
         positionInfoData: null,
+        positionsView: 'overall',
         accountsData: null,
         dataLoadError: null,
         allThemes: {},
@@ -408,12 +409,10 @@ document.addEventListener('alpine:init', () => {
                 if (this.positionsData && this.dataLoadError === null &&
                     (this.positionsData.retirement.length > 0 || this.positionsData.nonRetirement.length > 0)) {
                     createPositionsChart(
-                        'allPositionsChart',
-                        'retirementPositionsChart',
-                        'nonRetirementPositionsChart',
                         this.positionsData,
                         this.theme.classified,
-                        this.positionInfoData
+                        this.positionInfoData,
+                        this.printMode ? 'all' : this.positionsView
                     );
                 }
 
@@ -449,6 +448,22 @@ document.addEventListener('alpine:init', () => {
                 }
             } catch (error) {
                 console.error('Error rendering charts:', error);
+            }
+        },
+
+        setPositionsView(view) {
+            this.positionsView = view;
+            if (this.positionsData && this.dataLoadError === null &&
+                (this.positionsData.retirement.length > 0 || this.positionsData.nonRetirement.length > 0)) {
+                // Defer to next tick so Alpine has shown/hidden the canvases before rendering
+                this.$nextTick(() => {
+                    createPositionsChart(
+                        this.positionsData,
+                        this.theme.classified,
+                        this.positionInfoData,
+                        this.printMode ? 'all' : view
+                    );
+                });
             }
         },
 

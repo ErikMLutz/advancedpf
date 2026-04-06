@@ -958,40 +958,61 @@
 
                 <!-- Positions Section -->
                 <div id="positions-section" x-show="!hasError" class="w-full mt-16">
-                    <div class="mb-8">
+                    <div class="mb-8 flex items-baseline justify-between">
                         <h2 class="text-4xl font-light mb-1"
                             :style="`color: ${theme ? theme.classified.text : textColor};`">
                             Positions
                         </h2>
-                    </div>
-                    <!-- Overall exposure -->
-                    <div class="w-full mb-8">
-                        <h2 class="text-xl font-light mb-4"
-                            :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
-                            overall
-                        </h2>
-                        <div style="position: relative; height: 350px; width: 100%;">
-                            <canvas id="allPositionsChart"></canvas>
+                        <!-- 4-way toggle (hidden in print) -->
+                        <div class="positions-toggle flex gap-1">
+                            <template x-for="opt in ['overall', 'retirement', 'non-retirement', 'all']" :key="opt">
+                                <button
+                                    @click="setPositionsView(opt)"
+                                    :style="positionsView === opt
+                                        ? `color: ${theme.classified.text}; border-color: ${theme.classified.accent};`
+                                        : `color: ${theme.classified.textSubtle}; border-color: transparent;`"
+                                    class="pb-1 px-2 text-sm font-light border-b-2 transition-colors"
+                                    x-text="opt">
+                                </button>
+                            </template>
                         </div>
                     </div>
 
-                    <div class="flex gap-6" style="height: 350px;">
-                        <div class="flex-1 flex flex-col">
+                    <!-- Single chart view (overall / retirement / non-retirement) -->
+                    <div class="positions-single-view" x-show="positionsView !== 'all'" style="position: relative; height: 450px; width: 100%;">
+                        <canvas id="positionsSingleChart"></canvas>
+                    </div>
+
+                    <!-- All charts view (shown when toggle is "all", always shown in print) -->
+                    <div class="positions-all-view" x-show="positionsView === 'all'">
+                        <!-- Overall exposure -->
+                        <div class="w-full mb-8">
                             <h2 class="text-xl font-light mb-4"
                                 :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
-                                retirement
+                                overall
                             </h2>
-                            <div style="position: relative; flex: 1;">
-                                <canvas id="retirementPositionsChart"></canvas>
+                            <div style="position: relative; height: 350px; width: 100%;">
+                                <canvas id="allPositionsChart"></canvas>
                             </div>
                         </div>
-                        <div class="flex-1 flex flex-col">
-                            <h2 class="text-xl font-light mb-4"
-                                :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
-                                non-retirement
-                            </h2>
-                            <div style="position: relative; flex: 1;">
-                                <canvas id="nonRetirementPositionsChart"></canvas>
+                        <div class="flex gap-6" style="height: 350px;">
+                            <div class="flex-1 flex flex-col">
+                                <h2 class="text-xl font-light mb-4"
+                                    :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
+                                    retirement
+                                </h2>
+                                <div style="position: relative; flex: 1;">
+                                    <canvas id="retirementPositionsChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="flex-1 flex flex-col">
+                                <h2 class="text-xl font-light mb-4"
+                                    :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
+                                    non-retirement
+                                </h2>
+                                <div style="position: relative; flex: 1;">
+                                    <canvas id="nonRetirementPositionsChart"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1223,6 +1244,11 @@
                 padding-top: 0.25rem !important;
                 padding-bottom: 0.25rem !important;
             }
+
+            /* Positions: always show the "all" layout in print, hide toggle and single chart */
+            .positions-toggle { display: none !important; }
+            .positions-single-view { display: none !important; }
+            .positions-all-view { display: block !important; }
         }
     </style>
 

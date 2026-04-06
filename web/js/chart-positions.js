@@ -1,18 +1,15 @@
 // Positions Treemap Charts
-// Two side-by-side treemaps: retirement positions and non-retirement positions.
-// Sized by latest forward-filled value. Tooltips include expense ratio and dividend yield
-// when position_info.json data is available.
+// Single full-width treemap with a 4-way toggle (overall / retirement / non-retirement / all).
+// "all" mode renders three stacked charts (used for print).
 
 /**
- * Create positions treemap charts
- * @param {string} allCanvasId - Canvas element ID for combined overall treemap
- * @param {string} retirementCanvasId - Canvas element ID for retirement treemap
- * @param {string} nonRetirementCanvasId - Canvas element ID for non-retirement treemap
+ * Create positions treemap chart(s)
  * @param {{ retirement: Array<{label, value}>, nonRetirement: Array<{label, value}> }} data
  * @param {Object} classified - Classified color scheme
  * @param {Object|null} positionInfo - Map of ticker → {name, expense_ratio, dividend_yield}
+ * @param {'overall'|'retirement'|'non-retirement'|'all'} view
  */
-function createPositionsChart(allCanvasId, retirementCanvasId, nonRetirementCanvasId, data, classified, positionInfo) {
+function createPositionsChart(data, classified, positionInfo, view) {
     // Combine retirement + non-retirement, summing values for shared tickers
     const combined = new Map();
     [...data.retirement, ...data.nonRetirement].forEach(({ label, value }) => {
@@ -21,6 +18,7 @@ function createPositionsChart(allCanvasId, retirementCanvasId, nonRetirementCanv
     const allData = Array.from(combined.entries())
         .map(([label, value]) => ({ label, value }))
         .sort((a, b) => b.value - a.value);
+
     const chartColors = [
         classified.chart1,
         classified.chart2,
@@ -29,12 +27,10 @@ function createPositionsChart(allCanvasId, retirementCanvasId, nonRetirementCanv
         classified.chart5
     ];
 
-    // Returns white or black depending on which contrasts better against the given hex color
     function contrastColor(hex) {
         const r = parseInt(hex.slice(1, 3), 16);
         const g = parseInt(hex.slice(3, 5), 16);
         const b = parseInt(hex.slice(5, 7), 16);
-        // Perceived luminance (WCAG formula)
         const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
         return luminance > 0.5 ? '#000000' : '#ffffff';
     }
@@ -122,7 +118,28 @@ function createPositionsChart(allCanvasId, retirementCanvasId, nonRetirementCanv
         });
     }
 
-    makeChart(allCanvasId, allData, 'allPositionsChartInstance');
-    makeChart(retirementCanvasId, data.retirement, 'retirementPositionsChartInstance');
-    makeChart(nonRetirementCanvasId, data.nonRetirement, 'nonRetirementPositionsChartInstance');
+    function destroyChart(instanceKey) {
+        if (window[instanceKey] && typeof window[instanceKey].destroy === 'function') {
+            window[instanceKey].destroy();
+            window[instanceKey] = null;
+        }
+    }
+
+    if (view === 'all') {
+        destroyChart('positionsSingleChartInstance');
+        makeChart('allPositionsChart', allData, 'allPositionsChartInstance');
+        makeChart('retirementPositionsChart', data.retirement, 'retirementPositionsChartInstance');
+        makeChart('nonRetirementPositionsChart', data.nonRetirement, 'nonRetirementPositionsChartInstance');
+    } else {
+        destroyChart('allPositionsChartInstance');
+        destroyChart('retirementPositionsChartInstance');
+        destroyChart('nonRetirementPositionsChartInstance');
+
+        const treeData =
+            view === 'retirement' ? data.retirement :
+            view === 'non-retirement' ? data.nonRetirement :
+            allData;
+
+        makeChart('positionsSingleChart', treeData, 'positionsSingleChartInstance');
+    }
 }
