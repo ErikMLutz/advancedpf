@@ -1,15 +1,17 @@
 // Positions Treemap Charts
-// Single full-width treemap with a 4-way toggle (overall / retirement / non-retirement / all).
-// "all" mode renders three stacked charts (used for print).
+// Single full-width treemap with a toggle (overall / retirement / non-retirement / underlying / sectors / all).
+// "all" mode renders five charts for print: overall, retirement, non-retirement, underlying, sectors.
 
 /**
  * Create positions treemap chart(s)
  * @param {{ retirement: Array<{label, value}>, nonRetirement: Array<{label, value}> }} data
  * @param {Object} classified - Classified color scheme
  * @param {Object|null} positionInfo - Map of ticker → {name, expense_ratio, dividend_yield}
- * @param {'overall'|'retirement'|'non-retirement'|'all'} view
+ * @param {Array<{label, value}>|null} underlyingData - Pre-computed underlying holdings
+ * @param {Array<{label, value}>|null} sectorData - Pre-computed sector breakdown
+ * @param {'overall'|'retirement'|'non-retirement'|'underlying'|'sectors'|'all'} view
  */
-function createPositionsChart(data, classified, positionInfo, view) {
+function createPositionsChart(data, classified, positionInfo, underlyingData, sectorData, view) {
     // Combine retirement + non-retirement, summing values for shared tickers
     const combined = new Map();
     [...data.retirement, ...data.nonRetirement].forEach(({ label, value }) => {
@@ -35,7 +37,7 @@ function createPositionsChart(data, classified, positionInfo, view) {
         return luminance > 0.5 ? '#000000' : '#ffffff';
     }
 
-    function makeChart(canvasId, treeData, instanceKey) {
+    function makeChart(canvasId, treeData, instanceKey, tooltipExtra) {
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
 
@@ -69,9 +71,10 @@ function createPositionsChart(data, classified, positionInfo, view) {
                         font: { size: 11, weight: 500 },
                         formatter(ctx) {
                             if (ctx.type !== 'data') return '';
-                            const item = treeData[ctx.dataIndex];
-                            if (!item) return '';
-                            const pct = total > 0 ? (item.value / total * 100).toFixed(0) : '0';
+                            const item = ctx.raw?._data;
+                            const value = ctx.raw?.v;
+                            if (!item || value == null) return '';
+                            const pct = total > 0 ? (value / total * 100).toFixed(0) : '0';
                             return [item.label, `${pct}%`];
                         }
                     }
@@ -93,21 +96,26 @@ function createPositionsChart(data, classified, positionInfo, view) {
                         callbacks: {
                             title(ctxArr) {
                                 if (!ctxArr[0]) return '';
-                                const item = treeData[ctxArr[0].dataIndex];
-                                const info = positionInfo?.[item?.label];
-                                return info?.name ? `${item.label} — ${info.name}` : (item?.label ?? '');
+                                const label = ctxArr[0].raw?._data?.label ?? '';
+                                const info = positionInfo?.[label];
+                                return info?.name ? `${label} — ${info.name}` : label;
                             },
                             label(ctx) {
-                                const item = treeData[ctx.dataIndex];
-                                if (!item) return '';
-                                const pct = total > 0 ? (item.value / total * 100).toFixed(1) : '0.0';
+                                const label = ctx.raw?._data?.label;
+                                const value = ctx.raw?.v;
+                                if (value == null) return '';
+                                const pct = total > 0 ? (value / total * 100).toFixed(1) : '0.0';
                                 const lines = [`allocation: ${pct}%`];
-                                const info = positionInfo?.[item.label];
+                                const info = positionInfo?.[label];
                                 if (info?.expense_ratio != null) {
                                     lines.push(`expense ratio: ${(info.expense_ratio * 100).toFixed(2)}%`);
                                 }
                                 if (info?.dividend_yield != null) {
                                     lines.push(`dividend yield: ${(info.dividend_yield * 100).toFixed(2)}%`);
+                                }
+                                if (tooltipExtra) {
+                                    const extra = tooltipExtra(label);
+                                    if (extra) lines.push(extra);
                                 }
                                 return lines;
                             }
@@ -130,15 +138,21 @@ function createPositionsChart(data, classified, positionInfo, view) {
         makeChart('allPositionsChart', allData, 'allPositionsChartInstance');
         makeChart('retirementPositionsChart', data.retirement, 'retirementPositionsChartInstance');
         makeChart('nonRetirementPositionsChart', data.nonRetirement, 'nonRetirementPositionsChartInstance');
+        makeChart('positionsUnderlyingPrintChart', underlyingData, 'positionsUnderlyingPrintChartInstance');
+        makeChart('positionsSectorsPrintChart', sectorData, 'positionsSectorsPrintChartInstance');
     } else {
         destroyChart('allPositionsChartInstance');
         destroyChart('retirementPositionsChartInstance');
         destroyChart('nonRetirementPositionsChartInstance');
+        destroyChart('positionsUnderlyingPrintChartInstance');
+        destroyChart('positionsSectorsPrintChartInstance');
 
         const treeData =
-            view === 'retirement' ? data.retirement :
+            view === 'retirement'     ? data.retirement :
             view === 'non-retirement' ? data.nonRetirement :
-            allData;
+            view === 'underlying'     ? underlyingData :
+            view === 'sectors'        ? sectorData :
+            allData; // 'overall'
 
         makeChart('positionsSingleChart', treeData, 'positionsSingleChartInstance');
     }

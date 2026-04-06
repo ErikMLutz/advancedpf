@@ -1021,3 +1021,66 @@ function computePositionsData(rawPositions, manifest) {
         nonRetirement: toArray(nonRetirementMap)
     };
 }
+
+/**
+ * Expand positions into their underlying fund constituents across all accounts.
+ * For funds/ETFs with holdings data, each position's value is distributed
+ * proportionally to its constituents. For direct stocks or funds with no
+ * holdings data, the position itself is treated as the underlying.
+ * @param {{ retirement: Array<{label, value}>, nonRetirement: Array<{label, value}> }} positionsData
+ * @param {Object|null} positionHoldings - Map of ticker → {symbol: holdingPercent}
+ * @returns {Array<{label, value}>} Sorted descending by value
+ */
+function computeUnderlyingPositions(positionsData, positionHoldings) {
+    const underlyingMap = {};
+    const allPositions = [...positionsData.retirement, ...positionsData.nonRetirement];
+
+    allPositions.forEach(({ label: ticker, value }) => {
+        const holdings = positionHoldings?.[ticker];
+        if (holdings && Object.keys(holdings).length > 0) {
+            Object.entries(holdings).forEach(([symbol, pct]) => {
+                underlyingMap[symbol] = (underlyingMap[symbol] || 0) + value * pct;
+            });
+        } else {
+            underlyingMap[ticker] = (underlyingMap[ticker] || 0) + value;
+        }
+    });
+
+    const entries = Object.entries(underlyingMap)
+        .map(([label, value]) => ({ label, value }))
+        .sort((a, b) => b.value - a.value);
+
+    const total = entries.reduce((s, e) => s + e.value, 0);
+    const threshold = total * 0.005;
+    const significant = entries.filter(e => e.value >= threshold);
+    const otherValue = entries.filter(e => e.value < threshold).reduce((s, e) => s + e.value, 0);
+    if (otherValue > 0) significant.push({ label: 'other', value: otherValue });
+    return significant;
+}
+
+/**
+ * Aggregate positions by sector using per-fund sector weightings.
+ * Each position's value is distributed across sectors proportionally.
+ * @param {{ retirement: Array<{label, value}>, nonRetirement: Array<{label, value}> }} positionsData
+ * @param {Object|null} positionSectors - Map of ticker → {sector_name: weight} (fractions)
+ * @returns {Array<{label, value}>} Sorted descending by value
+ */
+function computeSectorPositions(positionsData, positionSectors) {
+    const sectorMap = {};
+    const allPositions = [...positionsData.retirement, ...positionsData.nonRetirement];
+
+    allPositions.forEach(({ label: ticker, value }) => {
+        const sectors = positionSectors?.[ticker];
+        if (sectors && Object.keys(sectors).length > 0) {
+            Object.entries(sectors).forEach(([sector, pct]) => {
+                sectorMap[sector] = (sectorMap[sector] || 0) + value * pct;
+            });
+        } else {
+            sectorMap['other'] = (sectorMap['other'] || 0) + value;
+        }
+    });
+
+    return Object.entries(sectorMap)
+        .map(([label, value]) => ({ label, value }))
+        .sort((a, b) => b.value - a.value);
+}

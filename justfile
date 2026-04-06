@@ -10,6 +10,7 @@ serve generate-sample-data="false":
     fi
     python3 scripts/fetch-index-returns.py
     python3 scripts/fetch-position-info.py
+    python3 scripts/fetch-position-holdings.py
     echo ""
     echo "Starting web server at http://localhost:8000"
     echo "Visit http://localhost:8000/web/"

@@ -965,7 +965,7 @@
                         </h2>
                         <!-- 4-way toggle (hidden in print) -->
                         <div class="positions-toggle flex gap-1">
-                            <template x-for="opt in ['overall', 'retirement', 'non-retirement', 'all']" :key="opt">
+                            <template x-for="opt in ['overall', 'retirement', 'non-retirement', 'underlying', 'sectors', 'all']" :key="opt">
                                 <button
                                     @click="setPositionsView(opt)"
                                     :style="positionsView === opt
@@ -979,7 +979,7 @@
                     </div>
 
                     <!-- Single chart view (overall / retirement / non-retirement) -->
-                    <div class="positions-single-view" x-show="positionsView !== 'all'" style="position: relative; height: 450px; width: 100%;">
+                    <div class="positions-single-view" x-show="positionsView !== 'all'" style="position: relative; height: 350px; width: 100%;">
                         <canvas id="positionsSingleChart"></canvas>
                     </div>
 
@@ -991,11 +991,11 @@
                                 :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
                                 overall
                             </h2>
-                            <div style="position: relative; height: 350px; width: 100%;">
+                            <div style="position: relative; height: 300px; width: 100%;">
                                 <canvas id="allPositionsChart"></canvas>
                             </div>
                         </div>
-                        <div class="flex gap-6" style="height: 350px;">
+                        <div class="flex gap-6" style="height: 300px;">
                             <div class="flex-1 flex flex-col">
                                 <h2 class="text-xl font-light mb-4"
                                     :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
@@ -1012,6 +1012,27 @@
                                 </h2>
                                 <div style="position: relative; flex: 1;">
                                     <canvas id="nonRetirementPositionsChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Underlying + Sectors (half-width each, bottom row) -->
+                        <div class="flex gap-6 mt-8" style="height: 300px;">
+                            <div class="flex-1 flex flex-col">
+                                <h2 class="text-xl font-light mb-4"
+                                    :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
+                                    underlying
+                                </h2>
+                                <div style="position: relative; flex: 1;">
+                                    <canvas id="positionsUnderlyingPrintChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="flex-1 flex flex-col">
+                                <h2 class="text-xl font-light mb-4"
+                                    :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
+                                    sectors
+                                </h2>
+                                <div style="position: relative; flex: 1;">
+                                    <canvas id="positionsSectorsPrintChart"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -1144,6 +1165,19 @@
                     const { canvasId, data, classified } = window._assetAllocationArgs;
                     createAssetAllocationChart(canvasId, data, classified, true);
                 }
+                // Render positions "all" view so all five charts are present regardless
+                // of which tab is active — must happen before stop()/update() below.
+                // Alpine's x-show keeps positions-all-view as display:none until we
+                // force it visible; Chart.js needs real dimensions to render.
+                if (window._positionsArgs) {
+                    const allView = document.querySelector('.positions-all-view');
+                    if (allView) {
+                        allView.style.display = 'block';
+                        void allView.offsetHeight; // force reflow so canvases get dimensions
+                    }
+                    const { data, classified, positionInfo, underlyingData, sectorData } = window._positionsArgs;
+                    createPositionsChart(data, classified, positionInfo, underlyingData, sectorData, 'all');
+                }
                 Object.values(Chart.instances).forEach(chart => {
                     // stop() cancels the in-flight requestAnimationFrame so it can't
                     // overdraw the canvas after we render. update('none') then draws
@@ -1159,6 +1193,13 @@
                 if (window._assetAllocationArgs) {
                     const { canvasId, data, classified } = window._assetAllocationArgs;
                     createAssetAllocationChart(canvasId, data, classified, false);
+                }
+                // Restore positions to the active tab view and hand display back to Alpine
+                if (window._positionsArgs) {
+                    const { data, classified, positionInfo, underlyingData, sectorData, view } = window._positionsArgs;
+                    const allView = document.querySelector('.positions-all-view');
+                    if (allView) allView.style.display = view === 'all' ? '' : 'none';
+                    createPositionsChart(data, classified, positionInfo, underlyingData, sectorData, view);
                 }
                 Object.values(Chart.instances).forEach(chart => chart.resize());
             }
@@ -1249,6 +1290,12 @@
             .positions-toggle { display: none !important; }
             .positions-single-view { display: none !important; }
             .positions-all-view { display: block !important; }
+
+            /* Collapse fixed-height row wrappers so dead space doesn't inflate gaps */
+            .positions-all-view > div,
+            .positions-all-view > div > div {
+                height: auto !important;
+            }
         }
     </style>
 
