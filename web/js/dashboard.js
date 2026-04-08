@@ -295,7 +295,7 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 // Accounts table (current balances, split by retirement)
-                this.accountsData = computeAccountsTable(sources, rawData.manifest);
+                this.accountsData = computeAccountsTable(sources, rawData.manifest, rawData.positions);
 
                 this.dataLoadError = null;
 

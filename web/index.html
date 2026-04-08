@@ -1082,6 +1082,13 @@
                                                         :style="`color: ${row.isSubRow ? theme.classified.textSubtle : theme.classified.text};`">
                                                         <span x-show="row.isSubRow" class="mr-1 opacity-40">↳</span>
                                                         <span x-text="row.title"></span>
+                                                        <template x-if="row.positions && row.positions.length > 0">
+                                                            <div class="mt-1" :style="`color: ${theme.classified.textSubtle};`" style="font-size: 0.7rem; line-height: 1.4;">
+                                                                <template x-for="pos in row.positions" :key="pos.ticker">
+                                                                    <span class="mr-3" x-text="`${pos.ticker} ${pos.proportion}%`"></span>
+                                                                </template>
+                                                            </div>
+                                                        </template>
                                                     </td>
                                                     <td class="py-3 font-light text-sm"
                                                         :style="`color: ${theme.classified.textSubtle};`"
@@ -1132,8 +1139,16 @@
                                             <template x-for="row in accountsData.retirement" :key="row.account">
                                                 <tr :style="`border-bottom: 1px solid ${theme.classified.backgroundAlt};`">
                                                     <td class="py-3 font-light"
-                                                        :style="`color: ${theme.classified.text};`"
-                                                        x-text="row.title"></td>
+                                                        :style="`color: ${theme.classified.text};`">
+                                                        <span x-text="row.title"></span>
+                                                        <template x-if="row.positions && row.positions.length > 0">
+                                                            <div class="mt-1" :style="`color: ${theme.classified.textSubtle};`" style="font-size: 0.7rem; line-height: 1.4;">
+                                                                <template x-for="pos in row.positions" :key="pos.ticker">
+                                                                    <span class="mr-3" x-text="`${pos.ticker} ${pos.proportion}%`"></span>
+                                                                </template>
+                                                            </div>
+                                                        </template>
+                                                    </td>
                                                     <td class="py-3 font-light text-sm"
                                                         :style="`color: ${theme.classified.textSubtle};`"
                                                         x-text="row.category"></td>

@@ -594,11 +594,41 @@ function computeSavingsAllocation(savingsRows, manifest) {
  * Results are split into non-retirement and retirement groups, each sorted by value descending.
  * @param {Array} sources - Array of SnapshotData sources (cash, property, debt, securities)
  * @param {Array} manifest - Manifest data with account metadata
+ * @param {Array|null} rawPositions - Optional raw positions data for per-account holdings
  * @returns {{ nonRetirement: Array, retirement: Array }}
- *   Each row: { account, value, netValue, category, debtRows, isSubRow }
+ *   Each row: { account, value, netValue, category, debtRows, isSubRow, positions }
  *   Sub-rows (isSubRow=true): { account, value, netValue, category, debtRows: [], isSubRow: true }
  */
-function computeAccountsTable(sources, manifest) {
+function computePositionsByAccount(rawPositions) {
+    if (!rawPositions || rawPositions.length === 0) return {};
+
+    const grouped = groupBy(rawPositions, r => `${r.account}|||${r.position}`);
+    const latestByAccountPosition = {};
+
+    for (const [key, rows] of grouped) {
+        const sepIdx = key.indexOf('|||');
+        const account = key.substring(0, sepIdx);
+        const position = key.substring(sepIdx + 3);
+        const sorted = [...rows].sort((a, b) => a.date - b.date);
+        const latest = sorted[sorted.length - 1];
+        if (!latest || latest.value <= 0) continue;
+        if (!latestByAccountPosition[account]) latestByAccountPosition[account] = {};
+        latestByAccountPosition[account][position] = latest.value;
+    }
+
+    const result = {};
+    for (const [account, positions] of Object.entries(latestByAccountPosition)) {
+        const total = Object.values(positions).reduce((s, v) => s + v, 0);
+        result[account] = Object.entries(positions)
+            .map(([ticker, value]) => ({ ticker, proportion: Math.round(value / total * 1000) / 10 }))
+            .sort((a, b) => b.proportion - a.proportion);
+    }
+    return result;
+}
+
+function computeAccountsTable(sources, manifest, rawPositions) {
+    const positionsByAccount = computePositionsByAccount(rawPositions);
+
     // Collect current-month values for every account across all sources
     const accountValues = {};
     sources.forEach(source => {
@@ -636,7 +666,8 @@ function computeAccountsTable(sources, manifest) {
         });
 
         const taxTreatment = meta.tax_treatment || 'taxable';
-        const row = { account: meta.account, title: meta.title || meta.account, value, netValue, category, taxTreatment, debtRows };
+        const positions = positionsByAccount[meta.account] || [];
+        const row = { account: meta.account, title: meta.title || meta.account, value, netValue, category, taxTreatment, debtRows, positions };
         if (meta.retirement === true) {
             retirement.push(row);
         } else {
@@ -654,7 +685,7 @@ function computeAccountsTable(sources, manifest) {
     const flatten = (rows) => {
         const flat = [];
         rows.forEach(row => {
-            flat.push({ account: row.account, title: row.title, value: row.value, netValue: row.netValue, category: row.category, taxTreatment: row.taxTreatment, debtRows: row.debtRows, isSubRow: false });
+            flat.push({ account: row.account, title: row.title, value: row.value, netValue: row.netValue, category: row.category, taxTreatment: row.taxTreatment, debtRows: row.debtRows, positions: row.positions, isSubRow: false });
             row.debtRows.forEach(debt => {
                 flat.push({ account: debt.account, title: debt.title, value: debt.value, netValue: debt.value, category: 'debt', taxTreatment: 'taxable', debtRows: [], isSubRow: true });
             });
@@ -819,20 +850,18 @@ function computePortfolioPerformance(sources, manifest, savingsRows) {
                 const accEnd = ev || 0;
                 let debtStart = 0, debtEnd = 0;
 
-                // Net linked debt for investment property (debt values are negative)
+                // Net linked debt against any asset category (debt values are negative)
                 let mortgagePaydown = 0;
                 const debtRows = [];
-                if (category === 'investment property') {
-                    (linkedDebt[account] || []).forEach(debtAcc => {
-                        const ds = valueAt(debtAcc, startMonth) || 0;
-                        const de = valueAt(debtAcc, endMonth) || 0;
-                        debtStart += ds;
-                        debtEnd += de;
-                        const paydown = de - ds;
-                        mortgagePaydown += paydown;
-                        debtRows.push({ account: debtAcc, start: ds, end: de, paydown });
-                    });
-                }
+                (linkedDebt[account] || []).forEach(debtAcc => {
+                    const ds = valueAt(debtAcc, startMonth) || 0;
+                    const de = valueAt(debtAcc, endMonth) || 0;
+                    debtStart += ds;
+                    debtEnd += de;
+                    const paydown = de - ds;
+                    mortgagePaydown += paydown;
+                    debtRows.push({ account: debtAcc, start: ds, end: de, paydown });
+                });
 
                 const accContributions = savingsIndex[year]?.[account] || 0;
                 startTotal += accStart + debtStart;
