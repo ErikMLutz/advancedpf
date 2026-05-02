@@ -787,6 +787,15 @@
 
                     <!-- Chart -->
                     <div x-show="!hasError" style="position: relative; height: 400px; width: 100%;">
+                        <div style="position: absolute; top: 0; right: 0.23%; z-index: 10; transform: translateY(-75%);">
+                            <button
+                                x-show="netWorthData && netWorthData.projection"
+                                @click="netWorthProjectionEnabled = !netWorthProjectionEnabled; renderCharts()"
+                                class="text-xs font-light px-2 py-1 border"
+                                :style="`border-color: ${theme ? theme.classified.backgroundAlt : '#ccc'}; color: ${netWorthProjectionEnabled ? (theme ? theme.classified.accent : '#666') : (theme ? theme.classified.textSubtle : '#999')};`">
+                                project
+                            </button>
+                        </div>
                         <canvas id="netWorthChart"></canvas>
                     </div>
                 </div>

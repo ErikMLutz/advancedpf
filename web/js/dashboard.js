@@ -18,6 +18,7 @@ document.addEventListener('alpine:init', () => {
         loading: true,
         loadingProgress: 0,
         netWorthData: null,
+        netWorthProjectionEnabled: false,
         netWorth12MonthsData: null,
         assetAllocationData: null,
         netWorthGrowthData: null,
@@ -187,10 +188,38 @@ document.addEventListener('alpine:init', () => {
                     categoryBreakdowns[month] = breakdown;
                 });
 
+                const nwMonths = filteredData.map(d => d.month);
+                const nwValues = filteredData.map(d => d.value);
+
+                // Compute 2-year projection from last 12 months growth rate
+                let projection = null;
+                if (nwMonths.length >= 13) {
+                    const lastValue = nwValues[nwValues.length - 1];
+                    const value12moAgo = nwValues[nwValues.length - 13];
+                    if (value12moAgo > 0) {
+                        const annualRate = lastValue / value12moAgo - 1;
+                        const monthlyFactor = Math.pow(1 + annualRate, 1 / 12);
+                        const lastMonth = nwMonths[nwMonths.length - 1];
+                        const [lastYear, lastMon] = lastMonth.split('-').map(Number);
+                        const projMonths = [];
+                        const projValues = [];
+                        // Start with the last real point so the line connects
+                        projMonths.push(lastMonth);
+                        projValues.push(lastValue);
+                        for (let i = 1; i <= 24; i++) {
+                            const d = new Date(lastYear, lastMon - 1 + i, 1);
+                            projMonths.push(formatMonth(d));
+                            projValues.push(lastValue * Math.pow(monthlyFactor, i));
+                        }
+                        projection = { months: projMonths, values: projValues, annualRate };
+                    }
+                }
+
                 this.netWorthData = {
-                    months: filteredData.map(d => d.month),
-                    values: filteredData.map(d => d.value),
-                    categoryBreakdowns: categoryBreakdowns
+                    months: nwMonths,
+                    values: nwValues,
+                    categoryBreakdowns: categoryBreakdowns,
+                    projection
                 };
 
                 // Compute YoY net worth growth % by month
@@ -314,7 +343,8 @@ document.addEventListener('alpine:init', () => {
                         'netWorthChart',
                         this.netWorthData,
                         this.theme.classified,
-                        this.netWorthData.categoryBreakdowns
+                        this.netWorthData.categoryBreakdowns,
+                        this.netWorthProjectionEnabled ? this.netWorthData.projection : null
                     );
                 }
 
