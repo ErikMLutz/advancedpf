@@ -1,17 +1,20 @@
 # Finance Dashboard - Task Runner
 
-# Serve the web app locally (use --generate-sample-data to generate fake data first)
+# Serve the web app locally (use --generate-sample-data to generate fake data first, --no-fetch to skip fetching external data)
 [arg("generate-sample-data", long="generate-sample-data", value="true")]
-serve generate-sample-data="false":
+[arg("no-fetch", long="no-fetch", value="true")]
+serve generate-sample-data="false" no-fetch="false":
     #!/usr/bin/env bash
     if [ "{{generate-sample-data}}" = "true" ]; then
         node scripts/generate-fake-data.js || exit 1
         echo ""
     fi
-    python3 scripts/fetch-index-returns.py
-    python3 scripts/fetch-position-info.py
-    python3 scripts/fetch-position-holdings.py
-    echo ""
+    if [ "{{no-fetch}}" = "false" ]; then
+        python3 scripts/fetch-index-returns.py
+        python3 scripts/fetch-position-info.py
+        python3 scripts/fetch-position-holdings.py
+        echo ""
+    fi
     echo "Starting web server at http://localhost:8000"
     echo "Visit http://localhost:8000/web/"
     python3 -m http.server 8000
