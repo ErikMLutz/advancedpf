@@ -6,8 +6,9 @@
  * @param {{ years: string[], datasets: Array<{category: string, data: number[]}> }} data
  * @param {Object} classified - Classified color scheme
  * @param {Array<number|null>} savingsRates - Savings rate per year (0-100), null if no income data
+ * @param {Object|null} projectedSavings - { year, by_category, total } from budget config
  */
-function createSavingsChart(canvasId, data, classified, savingsRates = []) {
+function createSavingsChart(canvasId, data, classified, savingsRates = [], projectedSavings = null) {
     const ctx = document.getElementById(canvasId);
 
     if (window.savingsChart && typeof window.savingsChart.destroy === 'function') {
@@ -21,6 +22,10 @@ function createSavingsChart(canvasId, data, classified, savingsRates = []) {
         classified.chart4,
         classified.chart5
     ];
+
+    const projectedIdx = projectedSavings
+        ? data.years.indexOf(projectedSavings.year)
+        : -1;
 
     const datasets = data.datasets.map((ds, i) => ({
         label: ds.category,
@@ -41,21 +46,70 @@ function createSavingsChart(canvasId, data, classified, savingsRates = []) {
         });
     }
 
-    // Inline plugin: draw savings rate label above each stacked bar total
-    const savingsRatePlugin = {
-        id: 'savingsRateLabels',
+    // Projected dashed bars: one dataset per category showing the remaining planned amount
+    if (projectedSavings && projectedIdx >= 0) {
+        const allCategories = [
+            ...data.datasets.map(ds => ds.category),
+            ...Object.keys(projectedSavings.by_category).filter(
+                cat => !data.datasets.some(ds => ds.category === cat)
+            )
+        ];
+
+        allCategories.forEach((category, i) => {
+            const planned = projectedSavings.by_category[category] || 0;
+            const actualDs = data.datasets.find(ds => ds.category === category);
+            const actual = actualDs ? (actualDs.data[projectedIdx] || 0) : 0;
+            const remaining = Math.max(0, planned - actual);
+            if (remaining <= 0) return;
+
+            const color = chartColors[i % chartColors.length];
+            const projData = data.years.map((_, yi) => yi === projectedIdx ? remaining : null);
+
+            datasets.push({
+                label: category + ' (planned)',
+                data: projData,
+                backgroundColor: color + '28', // ~16% opacity fill
+                borderWidth: 0,
+                stack: 'savings',
+                _projected: true,
+                _color: color
+            });
+        });
+    }
+
+    // Plugin: draw dashed borders over projected bars, rate label above each stack
+    const combinedPlugin = {
+        id: 'savingsPlugins',
         afterDatasetsDraw(chart) {
-            const { ctx, scales } = chart;
-            ctx.save();
-            ctx.font = '300 11px sans-serif';
-            ctx.fillStyle = classified.textSubtle;
-            ctx.textAlign = 'center';
+            const { ctx: c, scales } = chart;
+
+            // Dashed borders for projected bars
+            c.save();
+            chart.data.datasets.forEach((dataset, dsIdx) => {
+                if (!dataset._projected) return;
+                const meta = chart.getDatasetMeta(dsIdx);
+                meta.data.forEach((bar) => {
+                    if (!bar || bar.base === bar.y) return;
+                    const halfW = bar.width / 2;
+                    c.strokeStyle = dataset._color;
+                    c.lineWidth = 1.5;
+                    c.setLineDash([5, 4]);
+                    c.strokeRect(bar.x - halfW, bar.y, bar.width, bar.base - bar.y);
+                    c.setLineDash([]);
+                });
+            });
+            c.restore();
+
+            // Savings rate labels above each positive stack
+            c.save();
+            c.font = '300 11px sans-serif';
+            c.fillStyle = classified.textSubtle;
+            c.textAlign = 'center';
 
             chart.data.labels.forEach((_, colIdx) => {
                 const rate = savingsRates[colIdx];
                 if (rate === null || rate === undefined) return;
 
-                // Sum only positive visible dataset values to find top of positive stack
                 let total = 0;
                 chart.data.datasets.forEach((ds, dsIdx) => {
                     if (!chart.getDatasetMeta(dsIdx).hidden) {
@@ -66,16 +120,16 @@ function createSavingsChart(canvasId, data, classified, savingsRates = []) {
 
                 const x = scales.x.getPixelForValue(colIdx);
                 const y = scales.y.getPixelForValue(total);
-                ctx.fillText(rate + '%', x, y - 6);
+                c.fillText(rate + '%', x, y - 6);
             });
 
-            ctx.restore();
+            c.restore();
         }
     };
 
     window.savingsChart = new Chart(ctx, {
         type: 'bar',
-        plugins: [savingsRatePlugin],
+        plugins: [combinedPlugin],
         data: {
             labels: data.years,
             datasets
@@ -93,7 +147,9 @@ function createSavingsChart(canvasId, data, classified, savingsRates = []) {
                         color: classified.textSubtle,
                         font: { size: 11, weight: 300 },
                         boxWidth: 12,
-                        padding: 12
+                        padding: 12,
+                        // Hide projected datasets from legend — dashed bars are self-explanatory
+                        filter: (item) => !item.text.includes('(planned)')
                     }
                 },
                 tooltip: {
@@ -107,7 +163,8 @@ function createSavingsChart(canvasId, data, classified, savingsRates = []) {
                         label: function(context) {
                             const value = context.parsed.y;
                             if (!value) return null;
-                            return `${context.dataset.label}: $${fmtK(value, 1)}k`;
+                            const label = context.dataset.label.replace(' (planned)', ' planned');
+                            return `${label}: $${fmtK(value, 1)}k`;
                         },
                         footer: function(items) {
                             const total = items.reduce((sum, item) => sum + item.parsed.y, 0);

@@ -39,7 +39,8 @@ const CONFIG = {
         income: '/data/income.csv',
         savings: '/data/savings.csv',
         positions: '/data/positions.csv',
-        budget: '/web/data/budget.json'
+        budgetConfig: '/data/budget.yaml',
+        budgetData: '/web/data/budget.json'
     },
 
     // Chart display options

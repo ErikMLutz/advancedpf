@@ -449,6 +449,36 @@ function categorizeAccount(account) {
 }
 
 /**
+ * Compute planned savings by category from budget.yaml savings entries.
+ * Uses the already-loaded manifest to categorize each account.
+ * @param {Array} savingsEntries - Array of { account, value } from budget.yaml
+ * @param {Array} manifest - Loaded manifest rows
+ * @returns {{ total: number, by_category: Object }}
+ */
+function computeBudgetSavings(savingsEntries) {
+    const byCategory = {};
+    let total = 0;
+
+    for (const entry of savingsEntries) {
+        const path = (entry.account || '').trim();
+        const value = entry.value || 0;
+        total += value;
+
+        const parts = path.toLowerCase().replace(/^\//, '').split('/');
+        const hasRoth = parts.includes('roth');
+        let category;
+        if (parts.includes('hsa'))       category = 'hsa';
+        else if (parts.includes('401k')) category = hasRoth ? 'roth 401(k)' : '401(k)';
+        else if (parts.includes('ira'))  category = hasRoth ? 'roth ira' : 'ira';
+        else                             category = 'taxable';
+
+        byCategory[category] = (byCategory[category] || 0) + value;
+    }
+
+    return { total, by_category: byCategory };
+}
+
+/**
  * Get accounts with metadata and applied debt
  * Shared logic for getting account-level data with categorization
  * @param {Array} sources - Array of SnapshotData sources
