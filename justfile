@@ -10,9 +10,7 @@ serve generate-sample-data="false" no-fetch="false":
         echo ""
     fi
     if [ "{{no-fetch}}" = "false" ]; then
-        python3 scripts/fetch-index-returns.py
-        python3 scripts/fetch-position-info.py
-        python3 scripts/fetch-position-holdings.py
+        python3 scripts/fetch-all.py
         echo ""
     fi
     echo "Starting web server at http://localhost:8000"

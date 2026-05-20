@@ -23,6 +23,9 @@
     <!-- Chart.js Treemap Plugin (for positions charts) -->
     <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@3/dist/chartjs-chart-treemap.min.js"></script>
 
+    <!-- Chart.js Sankey Plugin (for budget charts) -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-sankey@0.14.0/dist/chartjs-chart-sankey.min.js"></script>
+
     <!-- Papa Parse (CSV parsing) -->
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
@@ -50,6 +53,7 @@
     <script src="js/chart-netWorthGrowth.js"></script>
     <script src="js/chart-portfolioPerformance.js"></script>
     <script src="js/chart-positions.js"></script>
+    <script src="js/chart-budgetIncomeSankey.js"></script>
 
     <!-- Dashboard component -->
     <script src="js/dashboard.js"></script>
@@ -825,6 +829,26 @@
                     </div>
                 </div>
 
+                <!-- Budget Section -->
+                <div id="budget-section" x-show="!hasError && budgetData" class="w-full mt-16">
+                    <div class="mb-4">
+                        <h2 class="text-4xl font-light mb-1"
+                            :style="`color: ${theme ? theme.classified.text : textColor};`">
+                            Budget
+                        </h2>
+                        <p class="text-xl font-light"
+                           :style="`color: ${theme ? theme.classified.textSubtle : textColor};`"
+                           x-text="budgetData ? Object.keys(budgetData).sort().pop() + ' income' : ''"></p>
+                    </div>
+                    <p class="text-sm font-light mb-4"
+                       :style="`color: ${theme ? theme.classified.textSubtle : textColor};`"
+                       x-show="budgetData"
+                       x-text="budgetData ? (() => { const yr = Object.keys(budgetData).sort().pop(); return budgetData[yr]?.income ? '$' + fmtK(budgetData[yr].income.total, 1) + 'k gross' : ''; })() : ''"></p>
+                    <div style="position: relative; height: 320px; width: 100%;">
+                        <canvas id="budgetIncomeSankeyChart"></canvas>
+                    </div>
+                </div>
+
                 <!-- Cash Flow Section -->
                 <div id="cashflow-section" x-show="!hasError" class="w-full mt-16">
                     <div class="mb-8">
@@ -1289,7 +1313,7 @@
             }
 
             /* Suggest page breaks before major sections */
-            #cashflow-section, #taxes-section, #performance-section, #positions-section, #accounts-section {
+            #budget-section, #cashflow-section, #taxes-section, #performance-section, #positions-section, #accounts-section {
                 page-break-before: always;
                 break-before: page;
                 padding-top: 4rem;

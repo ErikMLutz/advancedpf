@@ -38,7 +38,8 @@ const CONFIG = {
         manifest: '/data/manifest.yaml',
         income: '/data/income.csv',
         savings: '/data/savings.csv',
-        positions: '/data/positions.csv'
+        positions: '/data/positions.csv',
+        budget: '/web/data/budget.json'
     },
 
     // Chart display options
