@@ -159,6 +159,14 @@ function createTaxesChart(canvasId, data, classified, effectiveRates = [], proje
                 },
                 y: {
                     stacked: true,
+                    suggestedMax: (() => {
+                        const historicMax = Math.max(...data.years.map((_, i) =>
+                            (data.federalTax[i] || 0) + (data.stateTax[i] || 0) +
+                            (data.socialSecurity[i] || 0) + (data.medicare[i] || 0)
+                        ), 0);
+                        const projMax = projectedTax ? projectedTax.total : 0;
+                        return Math.max(historicMax, projMax) * 1.05;
+                    })(),
                     ticks: {
                         color: classified.textSubtle,
                         font: { size: 11, weight: 300 },
