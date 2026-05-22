@@ -6,8 +6,9 @@
  * @param {Object} data - Income data with years and tax breakdown arrays
  * @param {Object} classified - Classified color scheme
  * @param {Array<number|null>} effectiveRates - Effective tax rate per year (0-100), null if no income
+ * @param {Object|null} projectedTax - { year, total, rate } from budget config
  */
-function createTaxesChart(canvasId, data, classified, effectiveRates = []) {
+function createTaxesChart(canvasId, data, classified, effectiveRates = [], projectedTax = null) {
     const ctx = document.getElementById(canvasId);
 
     if (window.taxesChart && typeof window.taxesChart.destroy === 'function') {
@@ -29,51 +30,82 @@ function createTaxesChart(canvasId, data, classified, effectiveRates = []) {
         { label: 'medicare',           key: 'medicare' }
     ];
 
+    // Add projected year to labels/data if not already present
+    const labels = projectedTax && !data.years.includes(projectedTax.year)
+        ? [...data.years, projectedTax.year]
+        : [...data.years];
+    const projectedIdx = projectedTax ? labels.indexOf(projectedTax.year) : -1;
+
     const datasets = taxDatasets.map((ds, i) => ({
         label: ds.label,
-        data: data[ds.key],
+        data: projectedTax && !data.years.includes(projectedTax.year)
+            ? [...data[ds.key], 0]
+            : data[ds.key],
         backgroundColor: chartColors[i % chartColors.length],
         borderWidth: 0,
         stack: 'taxes'
     }));
 
-    // Inline plugin: draw effective tax rate above each stacked bar total
-    const effectiveRatePlugin = {
-        id: 'effectiveRateLabels',
+    // Combined plugin: dashed projected box + effective rate labels
+    const combinedPlugin = {
+        id: 'taxesPlugins',
         afterDatasetsDraw(chart) {
-            const { ctx, scales } = chart;
-            ctx.save();
-            ctx.font = '300 11px sans-serif';
-            ctx.fillStyle = classified.textSubtle;
-            ctx.textAlign = 'center';
+            const { ctx: c, scales } = chart;
 
-            chart.data.labels.forEach((_, colIdx) => {
-                const rate = effectiveRates[colIdx];
+            // Dashed box for projected year
+            if (projectedIdx >= 0 && projectedTax) {
+                const meta = chart.getDatasetMeta(0);
+                const bar = meta.data[projectedIdx];
+                if (bar) {
+                    const halfW = bar.width / 2;
+                    const top = scales.y.getPixelForValue(projectedTax.total);
+                    const bottom = scales.y.getPixelForValue(0);
+                    c.save();
+                    c.strokeStyle = classified.chart1;
+                    c.lineWidth = 1.5;
+                    c.setLineDash([5, 4]);
+                    c.strokeRect(bar.x - halfW, top, bar.width, bottom - top);
+                    c.restore();
+                }
+            }
+
+            // Effective rate labels above each bar
+            c.save();
+            c.font = '300 11px sans-serif';
+            c.fillStyle = classified.textSubtle;
+            c.textAlign = 'center';
+
+            labels.forEach((_, colIdx) => {
+                const rate = colIdx === projectedIdx
+                    ? Math.round(projectedTax.rate * 100)
+                    : effectiveRates[colIdx];
                 if (rate === null || rate === undefined) return;
 
-                let total = 0;
-                chart.data.datasets.forEach((ds, dsIdx) => {
-                    if (!chart.getDatasetMeta(dsIdx).hidden) {
-                        total += ds.data[colIdx] || 0;
-                    }
-                });
+                let total = colIdx === projectedIdx
+                    ? projectedTax.total
+                    : 0;
+
+                if (colIdx !== projectedIdx) {
+                    chart.data.datasets.forEach((ds, dsIdx) => {
+                        if (!chart.getDatasetMeta(dsIdx).hidden) {
+                            total += ds.data[colIdx] || 0;
+                        }
+                    });
+                }
 
                 const x = scales.x.getPixelForValue(colIdx);
                 const y = scales.y.getPixelForValue(total);
-                ctx.fillText(rate + '%', x, y - 6);
+                c.fillText(rate + '%', x, y - 6);
             });
 
-            ctx.restore();
+            c.restore();
         }
     };
 
     window.taxesChart = new Chart(ctx, {
         type: 'bar',
-        plugins: [effectiveRatePlugin],
-        data: {
-            labels: data.years,
-            datasets
-        },
+        plugins: [combinedPlugin],
+        data: { labels, datasets },
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -99,11 +131,17 @@ function createTaxesChart(canvasId, data, classified, effectiveRates = []) {
                     padding: 12,
                     callbacks: {
                         label: function(context) {
+                            if (context.dataIndex === projectedIdx) {
+                                // Only show on the first dataset to avoid repeats
+                                if (context.datasetIndex !== 0) return null;
+                                return `projected: $${fmtK(projectedTax.total, 1)}k (${Math.round(projectedTax.rate * 100)}%)`;
+                            }
                             const value = context.parsed.y;
                             if (!value) return null;
                             return `${context.dataset.label}: $${fmtK(value, 1)}k`;
                         },
                         footer: function(items) {
+                            if (items[0]?.dataIndex === projectedIdx) return '';
                             const total = items.reduce((sum, item) => sum + item.parsed.y, 0);
                             return `total: $${fmtK(total, 1)}k`;
                         }

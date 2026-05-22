@@ -49,7 +49,16 @@ Data Flow: CSV → dataLoader → dataProcessing → charts → display
 
 - **cash.csv, property.csv, debt.csv, securities.csv**: Snapshot data (`date, account, value`)
 - **credit.csv**: Event data — transactions by date (`date, account, value`; spending is negative)
-- **manifest.yaml**: Account metadata — YAML dict of accounts with fields: `type`, `retirement`, `debt_applies_to`, `primary_residence_since`, `primary_residence_until`, `title`
+- **manifest.yaml**: Account metadata — YAML dict of accounts. Each key is an account name (matching `account` column in CSVs). Fields:
+  - `type` — account type string, e.g. `cash`, `securities`, `property`, `debt`
+  - `retirement` — boolean; marks account as a retirement account
+  - `tax_treatment` — tax treatment for retirement accounts; known values: `roth ira`, `roth 401(k)`, `traditional ira`, `hsa`; defaults to `taxable` if omitted
+  - `debt_applies_to` — for `type: debt` accounts, the name of the asset account this debt is linked to (used for netting)
+  - `title` — optional display name override; falls back to the account key if absent
+  - `primary_residence_since` — YYYY-MM-DD date when the property became a primary residence (inclusive)
+  - `primary_residence_until` — YYYY-MM-DD date when it stopped being a primary residence (inclusive); omit if still current
+  - `investment_since` — YYYY-MM-DD date when the property became an investment property (inclusive)
+  - `investment_until` — YYYY-MM-DD date when it stopped being an investment property (inclusive); omit if still current
 - **income.csv**: Annual income/tax breakdown (`year, total_income, federal_income_tax, state_income_tax, social_security, medicare`)
 - **savings.csv**: Annual savings contributions (`year, account, amount`; negative = withdrawal)
 - **positions.csv**: Point-in-time holdings (`date, account, position, value`). Infrequent snapshots; forward-filled. `position` is a ticker symbol (e.g. `FXAIX`).
@@ -71,6 +80,9 @@ Both provide:
 - **computeSavingsAllocation(rows, manifest)**: Splits positive (savings) from negative (withdrawals) rows *before* aggregation. Returns `{ years, datasets, withdrawals }`.
 - **computeAssetAllocation(sources, manifest)**: Asset breakdown by category for current month
 - **categorizeAccount(meta)**: Maps manifest metadata → category string (e.g. `'retirement securities'`)
+- **computeBudgetSavings(entries)**: Categorizes budget savings by account path → tax-treatment label
+- **computeBudgetSpending(data)**: Normalizes baseline dict + discretionary array into `{ total, sections }`
+- **computeBudgetTaxes(data, grossIncome)**: `expected_rate × grossIncome`
 - **forwardFill(data)**: Fills missing months with last known value
 - **rollingAverage(values, window)**: Calculates rolling average
 
@@ -90,8 +102,16 @@ Both provide:
 ### Savings
 - **rate** (`savingsChart`): Stacked bar by category; withdrawals shown as separate negative bar (`chartWarn` color). Savings rate % label above each bar.
 
+### Budget
+- **income sankey** (`budgetIncomeSankeyChart`): Sankey diagram loaded from `data/budget.yaml` (JS) + `web/data/budget.json` (Python-computed stock-price-dependent income). Flows: income sources → gross income → savings → tax-treatment buckets; → taxes; → spending → baseline/discretionary → line items; → unaccounted. Overrun warning drawn via plugin when savings + spending + taxes > income.
+- Budget data lives in `data/budget.yaml` (not committed). Python script `scripts/fetch-budget-data.py` only handles stock price fetches (RSU, ESPP); all other computation (savings, spending, taxes) is done in JS.
+- `computeBudgetSavings(entries)`: categorizes savings by account path segments (hsa/401k/roth/ira → tax-treatment label).
+- `computeBudgetSpending(data)`: handles flat dict (baseline) and `[{name, budget, value}]` array (discretionary); stores both `budget` and `spent` per item.
+- `computeBudgetTaxes(data, grossIncome)`: `expected_rate × grossIncome`.
+- Projected year bars: income chart shows dashed outline bar; savings chart shows dashed stacked bars for planned-remaining per category; taxes chart shows single dashed box for expected total. All use `afterDraw` plugin pattern — no extra datasets for income/taxes (avoids bar-width issues), extra datasets with `_projected` flag for savings stacks.
+
 ### Taxes
-- **rate** (`taxesChart`): Stacked bar — federal / state / social security / medicare. Effective rate % label above each bar.
+- **rate** (`taxesChart`): Stacked bar — federal / state / social security / medicare. Effective rate % label above each bar. Accepts optional `projectedTax` for dashed box overlay on budget year.
 
 ### Performance
 - **net worth growth** (`netWorthGrowthChart`): Line chart, YoY % change by month + dashed 12-month moving avg. Starts 1 year after earliest net worth data.

@@ -446,11 +446,25 @@ document.addEventListener('alpine:init', () => {
                         return Math.round(totalTax / income * 100);
                     });
 
+                    let projectedTax = null;
+                    if (this.budgetData) {
+                        const latestBudgetYear = Object.keys(this.budgetData).sort().pop();
+                        const yearData = this.budgetData[latestBudgetYear];
+                        if (latestBudgetYear && !this.incomeData.years.includes(latestBudgetYear) && yearData?.taxes?.total) {
+                            projectedTax = {
+                                year: latestBudgetYear,
+                                total: yearData.taxes.total,
+                                rate: yearData.taxes.rate
+                            };
+                        }
+                    }
+
                     createTaxesChart(
                         'taxesChart',
                         this.incomeData,
                         this.theme.classified,
-                        effectiveRates
+                        effectiveRates,
+                        projectedTax
                     );
                 }
 
