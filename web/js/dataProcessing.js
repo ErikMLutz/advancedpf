@@ -479,6 +479,63 @@ function computeBudgetSavings(savingsEntries) {
 }
 
 /**
+ * Compute expected tax liability from budget.yaml taxes section.
+ * @param {Object} taxesData - e.g. { expected_rate: 0.31 }
+ * @param {number} grossIncome - total projected income
+ * @returns {{ total: number, rate: number }}
+ */
+function computeBudgetTaxes(taxesData, grossIncome) {
+    const rate = taxesData?.expected_rate || 0;
+    return { rate, total: Math.round(grossIncome * rate) };
+}
+
+/**
+ * Compute planned spending from budget.yaml spending section.
+ * Handles two item shapes:
+ *   baseline   — flat dict:  { credit_card: 90000, mortgage: 31000 }
+ *   discretionary — array:  [{ name, budget, value }, ...]
+ *
+ * @param {Object} spendingData
+ * @returns {{ total: number, sections: Object }}
+ *   sections: { <name>: { total, spent, items: { <label>: { budget, spent } } } }
+ */
+function computeBudgetSpending(spendingData) {
+    let total = 0;
+    const sections = {};
+
+    for (const [sectionName, raw] of Object.entries(spendingData || {})) {
+        let sectionTotal = 0;
+        let sectionSpent = 0;
+        const items = {};
+
+        if (Array.isArray(raw)) {
+            // Discretionary: [{ name, budget, value }]
+            for (const entry of raw) {
+                const label = entry.name || '';
+                const budget = entry.budget || 0;
+                const spent  = entry.value  || 0;
+                items[label] = { budget, spent };
+                sectionTotal += budget;
+                sectionSpent += spent;
+            }
+        } else {
+            // Baseline: flat key→value dict (fully committed, spent = budget)
+            for (const [key, value] of Object.entries(raw || {})) {
+                const label = key.replace(/_/g, ' ');
+                items[label] = { budget: value, spent: value };
+                sectionTotal += value;
+                sectionSpent += value;
+            }
+        }
+
+        sections[sectionName] = { total: sectionTotal, spent: sectionSpent, items };
+        total += sectionTotal;
+    }
+
+    return { total, sections };
+}
+
+/**
  * Get accounts with metadata and applied debt
  * Shared logic for getting account-level data with categorization
  * @param {Array} sources - Array of SnapshotData sources

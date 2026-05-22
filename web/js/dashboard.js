@@ -353,7 +353,12 @@ document.addEventListener('alpine:init', () => {
                                 income: budgetJson?.[year]?.income || null,
                                 savings: savingsEntries
                                     ? computeBudgetSavings(savingsEntries)
-                                    : null
+                                    : null,
+                            spending: computeBudgetSpending(budgetConfig?.budgets?.[year]?.spending),
+                            taxes: computeBudgetTaxes(
+                                budgetConfig?.budgets?.[year]?.taxes,
+                                budgetJson?.[year]?.income?.total || 0
+                            )
                             };
                         }
                     } else {
@@ -603,6 +608,8 @@ document.addEventListener('alpine:init', () => {
                             'budgetIncomeSankeyChart',
                             latestData.income,
                             latestData.savings,
+                            latestData.spending,
+                            latestData.taxes,
                             this.theme.classified
                         );
                     }

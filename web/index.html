@@ -844,7 +844,7 @@
                        :style="`color: ${theme ? theme.classified.textSubtle : textColor};`"
                        x-show="budgetData"
                        x-text="budgetData ? (() => { const yr = Object.keys(budgetData).sort().pop(); return budgetData[yr]?.income ? '$' + fmtK(budgetData[yr].income.total, 1) + 'k gross' : ''; })() : ''"></p>
-                    <div style="position: relative; height: 320px; width: 100%;">
+                    <div style="position: relative; height: 550px; width: 100%;">
                         <canvas id="budgetIncomeSankeyChart"></canvas>
                     </div>
                 </div>
