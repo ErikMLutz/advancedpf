@@ -14,6 +14,7 @@ Requires: pip install yfinance
 import csv
 import json
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 BASE = Path(__file__).parent.parent
@@ -71,11 +72,14 @@ def main():
             existing = json.load(f)
 
     result = dict(existing)
-    for ticker in positions:
-        info = fetch_info(ticker)
-        result[ticker] = info
-        name_str = f" ({info['name']})" if info.get('name') else ''
-        print(f'  {ticker}{name_str}')
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {executor.submit(fetch_info, ticker): ticker for ticker in positions}
+        for future in as_completed(futures):
+            ticker = futures[future]
+            info = future.result()
+            result[ticker] = info
+            name_str = f" ({info['name']})" if info.get('name') else ''
+            print(f'  {ticker}{name_str}')
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT, 'w') as f:
