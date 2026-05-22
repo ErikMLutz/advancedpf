@@ -42,6 +42,7 @@ document.addEventListener('alpine:init', () => {
         positionsView: 'overall',
         accountsData: null,
         budgetData: null,
+        cashSpendingData: null,
         dataLoadError: null,
         allThemes: {},
         themeMapping: {},
@@ -266,6 +267,9 @@ document.addEventListener('alpine:init', () => {
                 });
                 this.creditByYearData = creditByYear;
 
+                // Cash spending (checks, Venmo, etc.) as EventData for budget baseline chart
+                this.cashSpendingData = new EventData('cashSpending', rawData.cashSpending);
+
                 // Savings by year and category
                 this.savingsData = computeSavingsAllocation(rawData.savings, rawData.manifest);
 
@@ -354,12 +358,42 @@ document.addEventListener('alpine:init', () => {
                                 savings: savingsEntries
                                     ? computeBudgetSavings(savingsEntries)
                                     : null,
-                            spending: computeBudgetSpending(budgetConfig?.budgets?.[year]?.spending),
-                            taxes: computeBudgetTaxes(
-                                budgetConfig?.budgets?.[year]?.taxes,
-                                budgetJson?.[year]?.income?.total || 0
-                            )
+                                spending: computeBudgetSpending(budgetConfig?.budgets?.[year]?.spending),
+                                taxes: computeBudgetTaxes(
+                                    budgetConfig?.budgets?.[year]?.taxes,
+                                    budgetJson?.[year]?.income?.total || 0
+                                )
                             };
+
+                            // For projected years (not yet in incomeData), compute YTD actuals
+                            // needed by the baseline chart.
+                            if (!this.incomeData.years.includes(year)) {
+                                // Sum credit spending for this calendar year
+                                const creditMonthly = credit.valueByMonth(48);
+                                const creditYTD = creditMonthly
+                                    .filter(d => d.month.startsWith(year))
+                                    .reduce((sum, d) => sum + Math.abs(d.value), 0);
+
+                                // Sum cash spending for this calendar year
+                                const cashSpendingYTD = computeCashSpendingYTD(rawData.cashSpending, year);
+
+                                this.budgetData[year].creditYTD = creditYTD;
+                                this.budgetData[year].cashSpendingYTD = cashSpendingYTD;
+
+                                // Substitute real credit YTD into the is_credit baseline item
+                                const baselineItems = this.budgetData[year].spending?.sections?.baseline?.items;
+                                if (baselineItems) {
+                                    for (const item of Object.values(baselineItems)) {
+                                        if (item.is_credit === true) {
+                                            item.spent = creditYTD;
+                                        }
+                                    }
+                                    // Also update the section's spent total to reflect substitution
+                                    const baselineSection = this.budgetData[year].spending.sections.baseline;
+                                    baselineSection.spent = Object.values(baselineItems)
+                                        .reduce((sum, item) => sum + item.spent, 0);
+                                }
+                            }
                         }
                     } else {
                         this.budgetData = null;
@@ -625,6 +659,33 @@ document.addEventListener('alpine:init', () => {
                             latestData.spending,
                             latestData.taxes,
                             this.theme.classified
+                        );
+                    }
+
+                    // Budget progress chart (savings + discretionary vs prorated targets)
+                    if (latestData?.savings && this.savingsData) {
+                        createBudgetProgressChart(
+                            'budgetProgressChart',
+                            latestData,
+                            this.savingsData,
+                            this.theme.classified,
+                            latestYear
+                        );
+                    }
+
+                    // Budget baseline chart (baseline spending actual vs budget)
+                    const baselineItems = latestData?.spending?.sections?.baseline?.items;
+                    if (baselineItems) {
+                        const totalDiscretionaryActual = Object.values(
+                            latestData?.spending?.sections?.discretionary?.items || {}
+                        ).reduce((sum, item) => sum + (item.spent || 0), 0) || 0;
+                        createBudgetBaselineChart(
+                            'budgetBaselineChart',
+                            baselineItems,
+                            totalDiscretionaryActual,
+                            latestData.cashSpendingYTD || 0,
+                            this.theme.classified,
+                            latestYear
                         );
                     }
                 }
