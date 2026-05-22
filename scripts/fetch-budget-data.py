@@ -67,9 +67,9 @@ def get_price(ticker: str, event_date: date, current_prices: dict) -> float:
 
 def collect_tickers(income: dict) -> set:
     tickers = set()
-    for entry in income.get('RSU', []):
+    for entry in income.get('rsu', income.get('RSU', [])):
         tickers.add(entry['ticker'])
-    for entry in income.get('ESPP', []):
+    for entry in income.get('espp', income.get('ESPP', [])):
         tickers.add(entry['ticker'])
     return tickers
 
@@ -193,11 +193,15 @@ def process_year(year: int, income: dict) -> dict:
     salary_ranges = income.get('salary', [])
 
     # Collect all tickers that need current price (future events only)
+    rsu_entries = income.get('rsu', income.get('RSU', []))
+    espp_entries = income.get('espp', income.get('ESPP', []))
+    ltc_entries = income.get('ltc', income.get('LTC', []))
+
     future_tickers = set()
-    for r in income.get('RSU', []):
+    for r in rsu_entries:
         if parse_date(r['date']) > TODAY:
             future_tickers.add(r['ticker'])
-    for e in income.get('ESPP', []):
+    for e in espp_entries:
         if parse_date(e['date']) > TODAY:
             future_tickers.add(e['ticker'])
 
@@ -214,13 +218,13 @@ def process_year(year: int, income: dict) -> dict:
     bonus = compute_bonus(income.get('bonus', []), salary_ranges)
 
     print('  computing RSU...')
-    rsu = compute_rsu(income.get('RSU', []), current_prices)
+    rsu = compute_rsu(rsu_entries, current_prices)
 
     print('  computing LTC...')
-    ltc = compute_ltc(income.get('LTC', []))
+    ltc = compute_ltc(ltc_entries)
 
     print('  computing ESPP...')
-    espp = compute_espp(income.get('ESPP', []), salary_ranges, current_prices, year)
+    espp = compute_espp(espp_entries, salary_ranges, current_prices, year)
 
     total = salary + bonus + rsu + ltc + espp
     return {
