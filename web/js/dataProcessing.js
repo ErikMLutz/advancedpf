@@ -509,12 +509,15 @@ function computeBudgetSpending(spendingData) {
         const items = {};
 
         if (Array.isArray(raw)) {
-            // Discretionary: [{ name, budget, value }]
+            // Array form: [{ name, budget, value?, is_credit? }]
+            // Used for both discretionary and new-format baseline.
             for (const entry of raw) {
-                const label = entry.name || '';
-                const budget = entry.budget || 0;
-                const spent  = entry.value  || 0;
-                items[label] = { budget, spent };
+                const label    = entry.name || '';
+                const budget   = entry.budget || 0;
+                const isCredit = entry.is_credit === true;
+                // is_credit items: spent filled in later by dashboard from credit YTD
+                const spent    = isCredit ? 0 : (entry.value || 0);
+                items[label] = { budget, spent, ...(isCredit ? { is_credit: true } : {}) };
                 sectionTotal += budget;
                 sectionSpent += spent;
             }
@@ -533,6 +536,18 @@ function computeBudgetSpending(spendingData) {
     }
 
     return { total, sections };
+}
+
+/**
+ * Sum absolute spending values from cash_spending.csv for the given calendar year.
+ * @param {Array} cashSpendingRows - Raw cash_spending CSV rows (date already parsed to Date)
+ * @param {string} year - Four-digit year string, e.g. "2026"
+ * @returns {number}
+ */
+function computeCashSpendingYTD(cashSpendingRows, year) {
+    return (cashSpendingRows || [])
+        .filter(row => row.date && String(row.date.getFullYear()) === year)
+        .reduce((sum, row) => sum + Math.abs(row.value || 0), 0);
 }
 
 /**

@@ -83,7 +83,7 @@ async function loadManifestYAML(path) {
  */
 async function loadAllData() {
     try {
-        const [cash, property, debt, securities, credit, manifest, income, savings, positions] = await Promise.all([
+        const [cash, property, debt, securities, credit, manifest, income, savings, positions, cashSpending] = await Promise.all([
             loadCSV(CONFIG.dataPaths.cash),
             loadCSV(CONFIG.dataPaths.property),
             loadCSV(CONFIG.dataPaths.debt),
@@ -92,7 +92,8 @@ async function loadAllData() {
             loadManifestYAML(CONFIG.dataPaths.manifest),
             loadCSV(CONFIG.dataPaths.income),
             loadCSV(CONFIG.dataPaths.savings),
-            loadCSV(CONFIG.dataPaths.positions).catch(() => [])
+            loadCSV(CONFIG.dataPaths.positions).catch(() => []),
+            loadCSV(CONFIG.dataPaths.cashSpending).catch(() => [])
         ]);
 
         // Validate that we got data
@@ -118,6 +119,7 @@ async function loadAllData() {
         securities.forEach(parseDate);
         credit.forEach(parseDate);
         positions.forEach(parseDate);
+        cashSpending.forEach(parseDate);
 
         return {
             cash,
@@ -128,7 +130,8 @@ async function loadAllData() {
             manifest,
             income,
             savings,
-            positions
+            positions,
+            cashSpending
         };
     } catch (error) {
         throw new Error(`Failed to load data: ${error.message}`);

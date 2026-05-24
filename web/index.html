@@ -54,6 +54,8 @@
     <script src="js/chart-portfolioPerformance.js"></script>
     <script src="js/chart-positions.js"></script>
     <script src="js/chart-budgetIncomeSankey.js"></script>
+    <script src="js/chart-budgetProgress.js"></script>
+    <script src="js/chart-budgetBaseline.js"></script>
 
     <!-- Dashboard component -->
     <script src="js/dashboard.js"></script>
@@ -968,6 +970,14 @@
                        x-text="budgetData ? (() => { const yr = Object.keys(budgetData).sort().pop(); return budgetData[yr]?.income ? '$' + fmtK(budgetData[yr].income.total, 1) + 'k gross' : ''; })() : ''"></p>
                     <div style="position: relative; height: 550px; width: 100%;">
                         <canvas id="budgetIncomeSankeyChart"></canvas>
+                    </div>
+                    <div style="display:flex; gap:1rem; width:100%; margin-top:1rem;">
+                        <div style="flex:1; min-width:0; position:relative; height:400px;">
+                            <canvas id="budgetProgressChart"></canvas>
+                        </div>
+                        <div style="flex:1; min-width:0; position:relative; height:400px;">
+                            <canvas id="budgetBaselineChart"></canvas>
+                        </div>
                     </div>
                 </div>
 
