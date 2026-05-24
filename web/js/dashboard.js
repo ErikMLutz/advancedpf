@@ -42,6 +42,7 @@ document.addEventListener('alpine:init', () => {
         positionsView: 'overall',
         accountsData: null,
         budgetData: null,
+        rawData: null,
         dataLoadError: null,
         allThemes: {},
         themeMapping: {},
@@ -109,6 +110,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 // Load all CSV files
                 const rawData = await loadAllData();
+                this.rawData = rawData;
 
                 // Create data source objects (matching main.py structure)
                 const cash = new SnapshotData('cash', rawData.cash);
@@ -846,6 +848,200 @@ document.addEventListener('alpine:init', () => {
             this.themePalette = { ...this.themePalette, [name]: shades };
             this.newColorName = '';
             this.newColorHex = '#808080';
+        },
+
+        // ProjectionLab sync state
+        plApiKey: localStorage.getItem('pl_api_key') || '',
+        plTodayMeta: JSON.parse(localStorage.getItem('pl_today_meta') || 'null'),
+        plPastedMeta: '',
+        plCurrentSnippet: '',
+        plHistoricalSnippet: '',
+        plCombinedSnippet: '',
+        plCurrentCopied: false,
+        plHistoricalCopied: false,
+        plCombinedCopied: false,
+        plDiscoveryCopied: false,
+
+        get plIsReady() { return !!(this.plApiKey && this.plTodayMeta); },
+
+        get plDiscoverySnippet() {
+            const key = this.plApiKey || 'YOUR_KEY';
+            return [
+                '(async () => {',
+                `  const d = await window.projectionlabPluginAPI.exportData({ key: '${key}' });`,
+                '  const { savingsAccounts, investmentAccounts, assets, debts, ...meta } = d.today;',
+                '  console.log(JSON.stringify(meta));',
+                '})();'
+            ].join('\n');
+        },
+
+        plSaveApiKey() {
+            localStorage.setItem('pl_api_key', this.plApiKey);
+        },
+
+        plSaveMeta() {
+            try {
+                const parsed = JSON.parse(this.plPastedMeta);
+                this.plTodayMeta = parsed;
+                localStorage.setItem('pl_today_meta', JSON.stringify(parsed));
+                this.plPastedMeta = '';
+            } catch(e) {
+                alert('invalid json — paste the raw console output from the discovery snippet');
+            }
+        },
+
+        plResetMeta() {
+            this.plTodayMeta = null;
+            localStorage.removeItem('pl_today_meta');
+        },
+
+        plCopyToClipboard(text, field) {
+            navigator.clipboard.writeText(text);
+            this[field] = true;
+            setTimeout(() => { this[field] = false; }, 2000);
+        },
+
+        plDeterministicId(name) {
+            return btoa(unescape(encodeURIComponent(name))).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
+        },
+
+        plLatestBalance(source, accountName) {
+            const today = new Date();
+            const rows = (source || []).filter(r => r.account === accountName && r.date <= today);
+            if (!rows.length) return 0;
+            rows.sort((a, b) => b.date - a.date);
+            return rows[0].value;
+        },
+
+        plBuildToday() {
+            const rd = this.rawData;
+            const manifest = rd ? rd.manifest : [];
+            const meta = this.plTodayMeta || {};
+            const savingsAccounts = [];
+            const investmentAccounts = [];
+            const assets = [];
+            const debts = [];
+            manifest.forEach(m => {
+                const name = m.account;
+                const title = m.title || name;
+                const id = this.plDeterministicId(name);
+                if (m.type === 'cash') {
+                    const balance = this.plLatestBalance(rd.cash, name);
+                    savingsAccounts.push({
+                        type: 'savings', investmentGrowthType: 'none', dividendType: 'plan',
+                        investmentGrowthRate: 0, dividendRate: 0, liquid: true, withdraw: true,
+                        repurpose: true, icon: 'mdi-piggy-bank', color: 'teal-lighten-1', owner: 'me',
+                        withdrawAge: { value: 'now', modifier: 'include', type: 'keyword' },
+                        name, title, balance, id
+                    });
+                } else if (m.type === 'securities') {
+                    const balance = this.plLatestBalance(rd.securities, name);
+                    let type = 'taxable';
+                    if (m.retirement === true) {
+                        const tt = (m.tax_treatment || '').toLowerCase();
+                        if (tt === 'roth 401(k)') type = 'roth-401k';
+                        else if (tt === 'roth ira') type = 'roth-ira';
+                        else type = '401k';
+                    }
+                    investmentAccounts.push({
+                        type, investmentGrowthType: 'plan', dividendType: 'plan',
+                        investmentGrowthRate: 0, dividendRate: 0, yearlyFee: 0, yearlyFeeType: '%',
+                        liquid: true, withdraw: true, withdrawContribsFree: true, isPassiveIncome: true,
+                        hasEWPenalty: true, EWPenaltyRate: 10, EWAge: 60, country: 'US',
+                        costBasis: 0, icon: 'mdi-finance', color: 'blue-darken-1', owner: 'me',
+                        withdrawAge: { value: 'now', modifier: 'include', type: 'keyword' },
+                        name, title, balance, id
+                    });
+                } else if (m.type === 'property') {
+                    const amount = this.plLatestBalance(rd.property, name);
+                    assets.push({
+                        type: 'real-estate', classification: 'residential', interestType: 'compound',
+                        interestRate: 0, generateIncome: false, isPassiveIncome: false,
+                        maintenanceRate: 0, insuranceRate: 0, managementRate: 0,
+                        yearlyChange: { amount: 0, amountType: 'today$', type: 'appreciate', limit: 0, limitType: 'today$', limitEnabled: false },
+                        icon: 'mdi-home', color: 'indigo-lighten-1', owner: 'me',
+                        amountType: 'today$',
+                        start: { value: 'beforeCurrentYear', type: 'keyword' },
+                        end: { type: 'keyword', modifier: 'exclude', value: 'never' },
+                        name, title, amount, id
+                    });
+                } else if (m.type === 'debt') {
+                    const rawBalance = this.plLatestBalance(rd.debt, name);
+                    debts.push({
+                        type: 'debt', amountType: 'today$', interestRate: 0, interestType: 'compound',
+                        frequency: 'monthly', monthlyPayment: 0, monthlyPaymentType: 'today$',
+                        hasForgiveness: false, compounding: 'monthly',
+                        icon: 'mdi-credit-card', color: 'orange-lighten-1', owner: 'me',
+                        start: { value: 'now', modifier: 'include', type: 'keyword' },
+                        end: { type: 'keyword', modifier: 'exclude', value: 'never' },
+                        name, title, amount: Math.abs(rawBalance), id
+                    });
+                }
+            });
+            // Drop zero-balance accounts — PL ignores them and they create noise
+            const nonZero = arr => arr.filter(a => (a.balance ?? a.amount ?? 0) !== 0);
+            return {
+                ...meta,
+                savingsAccounts: nonZero(savingsAccounts),
+                investmentAccounts: nonZero(investmentAccounts),
+                assets: nonZero(assets),
+                debts: nonZero(debts),
+            };
+        },
+
+        plGenerateCurrentSnippet() {
+            const today = this.plBuildToday();
+            const key = this.plApiKey;
+            this.plCurrentSnippet = [
+                '(async () => {',
+                `  const key = '${key}';`,
+                `  const today = ${JSON.stringify(today, null, 2)};`,
+                `  await window.projectionlabPluginAPI.restoreCurrentFinances(today, { key });`,
+                `  console.log('current balances synced');`,
+                '})();'
+            ].join('\n');
+        },
+
+        plGenerateHistoricalSnippet() {
+            const rd = this.rawData;
+            const manifest = rd ? rd.manifest : [];
+            const history = computeProgressHistory(rd, manifest);
+            const key = this.plApiKey;
+            const dateNow = new Date().toISOString().split('T')[0];
+            this.plHistoricalSnippet = [
+                '(async () => {',
+                `  const key = '${key}';`,
+                `  const progress = {`,
+                `    data: ${JSON.stringify(history)},`,
+                `    lastUpdated: '${dateNow}'`,
+                `  };`,
+                `  await window.projectionlabPluginAPI.restoreProgress(progress, { key });`,
+                `  console.log('historical data synced (${history.length} months)');`,
+                '})();'
+            ].join('\n');
+        },
+
+        plGenerateCombinedSnippet() {
+            const today = this.plBuildToday();
+            const rd = this.rawData;
+            const manifest = rd ? rd.manifest : [];
+            const history = computeProgressHistory(rd, manifest);
+            const key = this.plApiKey;
+            const dateNow = new Date().toISOString().split('T')[0];
+            this.plCombinedSnippet = [
+                '(async () => {',
+                `  const key = '${key}';`,
+                `  const today = ${JSON.stringify(today, null, 2)};`,
+                `  await window.projectionlabPluginAPI.restoreCurrentFinances(today, { key });`,
+                `  console.log('current balances synced');`,
+                `  const progress = {`,
+                `    data: ${JSON.stringify(history)},`,
+                `    lastUpdated: '${dateNow}'`,
+                `  };`,
+                `  await window.projectionlabPluginAPI.restoreProgress(progress, { key });`,
+                `  console.log('historical data synced (${history.length} months)');`,
+                '})();'
+            ].join('\n');
         }
         };
     });

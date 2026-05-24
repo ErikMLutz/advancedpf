@@ -1175,6 +1175,127 @@ function computeUnderlyingPositions(positionsData, positionHoldings) {
 }
 
 /**
+ * Compute monthly aggregate snapshots for ProjectionLab's restoreProgress() API.
+ * Covers the full CSV history across all snapshot sources, forward-filling per account.
+ * @param {Object} rawData - Object returned by dataLoader (keys: cash, securities, property, debt, manifest)
+ * @param {Array} manifest - Manifest data with account metadata (same as rawData.manifest)
+ * @returns {Array} Array of monthly progress entries sorted ascending by date:
+ *   { date, savings, taxDeferred, taxFree, taxable, assets, debt, loans, crypto, netWorth }
+ *   date is a Unix ms timestamp for the 1st of the month.
+ */
+function computeProgressHistory(rawData, manifest) {
+    const sources = [
+        { rows: rawData.cash || [], sourceType: 'cash' },
+        { rows: rawData.securities || [], sourceType: 'securities' },
+        { rows: rawData.property || [], sourceType: 'property' },
+        { rows: rawData.debt || [], sourceType: 'debt' }
+    ];
+
+    // Collect all months that appear in any source
+    const allMonthsSet = new Set();
+    sources.forEach(({ rows }) => {
+        rows.forEach(row => {
+            allMonthsSet.add(formatMonth(row.date));
+        });
+    });
+
+    if (allMonthsSet.size === 0) return [];
+
+    const allMonths = [...allMonthsSet].sort();
+
+    // Build per-account timeline: account → [{month, value}] sorted ascending (latest wins per month)
+    const accountSnaps = {};
+    sources.forEach(({ rows }) => {
+        rows.forEach(row => {
+            const month = formatMonth(row.date);
+            if (!accountSnaps[row.account]) accountSnaps[row.account] = {};
+            const existing = accountSnaps[row.account][month];
+            if (!existing || row.date >= existing.date) {
+                accountSnaps[row.account][month] = { date: row.date, value: row.value };
+            }
+        });
+    });
+
+    // Forward-fill helper: last known value for an account at or before targetMonth
+    const accountTimelines = {};
+    Object.entries(accountSnaps).forEach(([account, monthMap]) => {
+        accountTimelines[account] = Object.entries(monthMap)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([month, { value }]) => ({ month, value }));
+    });
+
+    function valueAt(account, targetMonth) {
+        const timeline = accountTimelines[account];
+        if (!timeline || timeline.length === 0) return 0;
+        let result = 0;
+        for (const row of timeline) {
+            if (row.month <= targetMonth) result = row.value;
+            else break;
+        }
+        return result;
+    }
+
+    // Index manifest by account name for fast lookup
+    const manifestMap = Object.fromEntries(manifest.map(m => [m.account, m]));
+
+    // Build result: one entry per month
+    return allMonths.map(month => {
+        let savings = 0;
+        let taxDeferred = 0;
+        let taxFree = 0;
+        let taxable = 0;
+        let assets = 0;
+        let debt = 0;
+
+        Object.keys(accountTimelines).forEach(account => {
+            const meta = manifestMap[account];
+            if (!meta) return;
+
+            const value = valueAt(account, month);
+            const accountType = meta.type;
+
+            if (accountType === 'cash') {
+                savings += value;
+            } else if (accountType === 'securities') {
+                if (meta.retirement === true) {
+                    const treatment = (meta.tax_treatment || '').toLowerCase();
+                    if (treatment === 'roth ira' || treatment === 'roth 401(k)') {
+                        taxFree += value;
+                    } else {
+                        taxDeferred += value;
+                    }
+                } else {
+                    taxable += value;
+                }
+            } else if (accountType === 'property') {
+                assets += value;
+            } else if (accountType === 'debt') {
+                debt += Math.abs(value);
+            }
+        });
+
+        const netWorth = savings + taxDeferred + taxFree + taxable + assets - debt;
+
+        // Unix ms timestamp for the 1st of the month
+        const [year, mon] = month.split('-').map(Number);
+        const date = Date.UTC(year, mon - 1, 1);
+
+        return {
+            date,
+            savings,
+            taxDeferred,
+            taxFree,
+            taxable,
+            assets,
+            debt,
+            loans: 0,
+            crypto: 0,
+            netWorth
+        };
+    });
+}
+
+/**
  * Aggregate positions by sector using per-fund sector weightings.
  * Each position's value is distributed across sectors proportionally.
  * @param {{ retirement: Array<{label, value}>, nonRetirement: Array<{label, value}> }} positionsData

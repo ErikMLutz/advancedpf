@@ -167,6 +167,12 @@
                                         class="pb-3 px-2 text-lg font-light transition-colors">
                                     Theme
                                 </button>
+                                <button @click="activeTab = 'projectionlab'"
+                                        :style="activeTab === 'projectionlab' ? `color: ${theme.classified.text}; border-color: ${theme.classified.accent};` : `color: ${theme.classified.textSubtle};`"
+                                        :class="activeTab === 'projectionlab' ? 'border-b-2' : ''"
+                                        class="pb-3 px-2 text-lg font-light transition-colors">
+                                    ProjectionLab
+                                </button>
                             </div>
 
                             <!-- Tab Content -->
@@ -741,7 +747,124 @@
                             </div>
                         </div>
 
+                                </div><!-- End theme details -->
+                            </div><!-- End mt-8 wrapper -->
                                 </div><!-- End theme tab -->
+
+                                <!-- ProjectionLab Tab -->
+                                <div x-show="activeTab === 'projectionlab'">
+                                    <div class="space-y-8">
+
+                                        <!-- Section 1: API Key -->
+                                        <div>
+                                            <h3 class="text-lg font-light mb-4"
+                                                :style="`color: ${theme.classified.text};`">api key</h3>
+                                            <div class="space-y-3 pl-4 border-l"
+                                                 :style="`border-color: ${theme.classified.backgroundAlt};`">
+                                                <div class="flex items-center gap-3">
+                                                    <input type="text"
+                                                           x-model="plApiKey"
+                                                           placeholder="your ProjectionLab plugin API key"
+                                                           class="flex-1 font-light outline-none"
+                                                           :style="`background: transparent; border: 1px solid ${theme.classified.backgroundAlt}; color: ${theme.classified.text}; border-radius: 4px; padding: 6px 10px;`">
+                                                    <button @click="plSaveApiKey()"
+                                                            :style="`border-color: ${theme.classified.backgroundAlt};`"
+                                                            class="px-4 py-2 text-sm font-light border hover:opacity-70 transition-opacity">
+                                                        save
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Section 2: One-time setup -->
+                                        <div>
+                                            <h3 class="text-lg font-light mb-4"
+                                                :style="`color: ${theme.classified.text};`">one-time setup</h3>
+                                            <div class="space-y-4 pl-4 border-l"
+                                                 :style="`border-color: ${theme.classified.backgroundAlt};`">
+                                                <p class="text-sm font-light opacity-70">run this snippet once in your ProjectionLab browser console to capture your account metadata:</p>
+
+                                                <!-- Discovery snippet -->
+                                                <div>
+                                                    <pre class="text-xs font-mono p-3 overflow-x-auto"
+                                                         :style="`background-color: ${theme.classified.backgroundAlt}; color: ${theme.classified.text}; border-radius: 4px;`"
+                                                         x-text="plDiscoverySnippet"></pre>
+                                                    <button @click="plCopyToClipboard(plDiscoverySnippet, 'plDiscoveryCopied')"
+                                                            :style="`border-color: ${theme.classified.backgroundAlt};`"
+                                                            class="mt-2 px-3 py-1.5 text-xs font-light border hover:opacity-70 transition-opacity flex items-center gap-1.5">
+                                                        <svg x-show="!plDiscoveryCopied" class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+                                                        </svg>
+                                                        <svg x-show="plDiscoveryCopied" class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" x-cloak>
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                                        </svg>
+                                                        <span x-text="plDiscoveryCopied ? 'copied!' : 'copy'"></span>
+                                                    </button>
+                                                </div>
+
+                                                <!-- Paste + save, or configured badge -->
+                                                <div x-show="!plTodayMeta">
+                                                    <p class="text-sm font-light opacity-70 mb-2">paste the console output here:</p>
+                                                    <textarea x-model="plPastedMeta"
+                                                              rows="4"
+                                                              placeholder='{"age":30,"location":"US",...}'
+                                                              class="w-full font-mono text-xs outline-none resize-y"
+                                                              :style="`background: transparent; border: 1px solid ${theme.classified.backgroundAlt}; color: ${theme.classified.text}; border-radius: 4px; padding: 8px 10px;`"></textarea>
+                                                    <button @click="plSaveMeta()"
+                                                            :style="`border-color: ${theme.classified.backgroundAlt};`"
+                                                            class="mt-2 px-4 py-2 text-sm font-light border hover:opacity-70 transition-opacity">
+                                                        save
+                                                    </button>
+                                                </div>
+                                                <div x-show="plTodayMeta" class="flex items-center gap-3">
+                                                    <span class="text-sm font-light"
+                                                          :style="`color: ${theme.classified.accent};`">configured ✓</span>
+                                                    <button @click="plResetMeta()"
+                                                            class="text-sm font-light opacity-60 hover:opacity-100 transition-opacity underline">
+                                                        reset
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Section 3: Sync buttons -->
+                                        <div>
+                                            <h3 class="text-lg font-light mb-4"
+                                                :style="`color: ${theme.classified.text};`">sync</h3>
+                                            <div class="space-y-6 pl-4 border-l"
+                                                 :style="`border-color: ${theme.classified.backgroundAlt};`">
+                                                <p x-show="!plIsReady" class="text-sm font-light opacity-50">save your api key and complete one-time setup to enable sync.</p>
+
+                                                <!-- Combined Sync (primary) -->
+                                                <div>
+                                                    <button @click="plGenerateCombinedSnippet()"
+                                                            :disabled="!plIsReady"
+                                                            :style="`border-color: ${theme.classified.backgroundAlt}; opacity: ${plIsReady ? 1 : 0.4}; cursor: ${plIsReady ? 'pointer' : 'not-allowed'};`"
+                                                            class="px-4 py-2 text-sm font-light border hover:opacity-70 transition-opacity">
+                                                        generate sync snippet
+                                                    </button>
+                                                    <div x-show="plCombinedSnippet" class="mt-3">
+                                                        <pre class="text-xs font-mono p-3 overflow-x-auto max-h-64"
+                                                             :style="`background-color: ${theme.classified.backgroundAlt}; color: ${theme.classified.text}; border-radius: 4px;`"
+                                                             x-text="plCombinedSnippet"></pre>
+                                                        <button @click="plCopyToClipboard(plCombinedSnippet, 'plCombinedCopied')"
+                                                                :style="`border-color: ${theme.classified.backgroundAlt};`"
+                                                                class="mt-2 px-3 py-1.5 text-xs font-light border hover:opacity-70 transition-opacity flex items-center gap-1.5">
+                                                            <svg x-show="!plCombinedCopied" class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+                                                            </svg>
+                                                            <svg x-show="plCombinedCopied" class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" x-cloak>
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                                            </svg>
+                                                            <span x-text="plCombinedCopied ? 'copied!' : 'copy'"></span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div><!-- End projectionlab tab -->
                             </div><!-- End tab content -->
                         </div><!-- End tabs container -->
                     </div><!-- End max-w-6xl mx-auto -->
