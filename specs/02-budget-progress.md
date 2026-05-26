@@ -6,99 +6,196 @@ No transaction-level accounting. Discretionary spending is tracked manually (spr
 
 ---
 
-## Layout
+## Budget Section Layout
 
-Chart 1 and Chart 2 sit side by side (half width each) below the existing Sankey:
+The Budget section contains, in order:
 
-```html
-<canvas id="budgetIncomeSankeyChart"></canvas>
-<div class="flex gap-4">
-    <canvas id="budgetProgressChart"></canvas>
-    <canvas id="budgetBaselineChart"></canvas>
-</div>
 ```
+Budget                              ← h2 ("Budget")
+cashflow ($Xk gross)                ← text-xl subheader (gross income inline)
+
+[Sankey chart — full width]
+
+savings goals ($Xk / $Xk)          ← text-xl heading (side by side)
+[savings progress chart]
+
+discretionary spending goals ($Xk / $Xk)   ← text-xl heading (side by side)
+[discretionary progress chart]
+
+baseline spending goal ($Xk / $Xk)  ← text-xl heading (full width)
+[baseline line chart]
+```
+
+The savings and discretionary progress charts sit side by side (flex row, each `flex:1`). The baseline chart is full width below.
 
 ---
 
-## Chart 1: Progress Against Goals
+## Savings Schema (`budget.yaml`)
 
-### What it shows
+Each savings entry now has `goal` (annual target) and `value` (YTD actual):
 
-A horizontal progress bar chart — one bar per tracked item — grouped into two sections:
-
-- **savings** — actual YTD contributions by tax-treatment category vs. planned for the year, prorated to today
-- **discretionary** — actual YTD spend per line item vs. budget, prorated to today
-
-Each bar shows: spent (filled), remaining-to-target (outline), overrun past 100%. Overrun color differs by section: spending overrun uses `classified.chartWarn` (you overspent, notable but not catastrophic); savings overrun uses `classified.accent` (you saved more than planned — good news).
-
-The target is prorated using a simple day-of-year fraction, making the chart actionable mid-year without snapping to pay periods.
-
-### Prorating
-
-```
-prorated_target = annual_budget × (day_of_year / days_in_year)
-progress_pct = actual_spent / prorated_target
+```yaml
+savings:
+  - account: /fidelity/roth 401k
+    goal: 23000
+    value: 15000
+  - account: /fidelity/hsa
+    goal: 8550
+    value: 5700
+  - account: /fidelity/taxable
+    goal: 70000
+    value: 42000
 ```
 
-For savings: actual comes from `savingsData` filtered to the budget year. For discretionary: actual is the `spent` (= `value`) field already in `budgetData[year].spending.sections.discretionary.items`.
+`computeBudgetSavings(entries)` categorizes by account path segments and aggregates into `by_category`:
 
-If the budget year is not yet in `savingsData` (it's still projected), savings actual = 0 for each category — the bar is empty but the prorated target is shown.
-
-### Data sources
-
-**Savings — planned**: `budgetData[year].savings.by_category`
 ```js
-{ "401(k)": 30918, "hsa": 8550, "roth ira": 29000, "taxable": 70000 }
+{
+  total: <sum of value fields>,
+  totalGoal: <sum of goal fields>,
+  by_category: {
+    "roth 401(k)": { goal: 23000, value: 15000 },
+    "hsa":         { goal: 8550,  value: 5700  },
+    "taxable":     { goal: 70000, value: 42000 },
+  }
+}
 ```
 
-**Savings — actual**: `savingsData`, filtered to budget year by category (same path-segment categorization as `computeBudgetSavings`).
+Path-segment categorization rules (applied to lowercased path split on `/`):
+- Contains `hsa` → `hsa`
+- Contains `401k` + `roth` → `roth 401(k)`
+- Contains `401k` → `401(k)`
+- Contains `ira` + `roth` → `roth ira`
+- Contains `ira` → `ira`
+- Otherwise → `taxable`
 
-**Discretionary — planned and actual**: `budgetData[year].spending.sections.discretionary.items`
+This schema change required updates in four places:
+- `computeBudgetSavings` in `dataProcessing.js`
+- `chart-budgetIncomeSankey.js` (uses `savings?.totalGoal ?? savings?.total`)
+- `chart-savings.js` (uses `projectedSavings.by_category[cat]?.goal ?? ...`)
+- `dashboard.js` (savings rows use `item.goal`/`item.value`; projected total uses `totalGoal`)
+
+---
+
+## Chart 1: Progress Charts (Savings + Discretionary)
+
+Two separate horizontal bar charts rendered side by side via two calls to the same function:
+
 ```js
-{ "honeymoon": { budget: 8000, spent: 4387 }, "alaska": { budget: 10000, spent: 7097 } }
+createBudgetProgressChart('budgetSavingsProgressChart',     savingsRows,  classified)
+createBudgetProgressChart('budgetSpendingProgressChart',    spendingRows, classified)
 ```
-`spent` here is manually entered in `budget.yaml` as `value` — it represents total spending on that item regardless of whether it went through credit card or cash.
 
-### New data needed
+**File**: `web/js/chart-budgetProgress.js`  
+**Function**: `createBudgetProgressChart(canvasId, rows, classified)`
 
-None. Everything is already in `budgetData` and `savingsData`.
+Uses `window[canvasId]` for instance tracking (so two instances can coexist).
 
-### Implementation notes
+### Row shape
 
-- New file: `web/js/chart-budgetProgress.js`, function `createBudgetProgressChart(canvasId, budgetData, savingsData, classified, today)`
-- Chart type: horizontal bar (`bar` with `indexAxis: 'y'`)
-- Visual separator or heading between savings and discretionary groups
-- Colors: savings bars use `classified.accent`; savings overrun uses `classified.accent` (good news); discretionary bars use `classified.chart3`; discretionary overrun uses `classified.chartWarn`; prorated-remaining uses `classified.backgroundAlt`
-- Labels: show `%` of prorated target at end of bar; tooltip shows dollar amounts (spent, prorated target, annual budget)
+```js
+// Savings rows (from budgetData[year].savings.by_category):
+{ label: "roth 401(k)", annualBudget: 23000, actual: 15000, type: 'savings' }
+
+// Spending rows (from budgetData[year].spending.sections.discretionary.items):
+{ label: "honeymoon", annualBudget: 8000, actual: 4387, type: 'discretionary' }
+```
+
+### Bar segments
+
+Each row renders three stacked segments:
+1. **spent** — actual, colored `classified.accent` (savings) or `classified.chart3` (discretionary)
+2. **remaining** — `max(0, budget − actual)`, colored `classified.backgroundAlt`
+3. **overrun** — `max(0, actual − budget)`, colored `classified.accent` (savings = good news) or `classified.chartWarn` (discretionary = overspent)
+
+No prorating. Bars show actual vs annual budget.
+
+### Labels and tooltip
+
+- `afterDatasetsDraw` plugin draws `X%` at right edge of bar (`actual / annualBudget × 100`)
+- Tooltip: `mode: 'index'`, only dataset 0 produces content (avoids duplicate lines for remaining/overrun segments)
+- Tooltip shows: `spent: $Xk` and `annual budget: $Xk`
 
 ---
 
 ## Chart 2: Baseline Spending Tracker
 
-### The problem
+**File**: `web/js/chart-budgetBaseline.js`  
+**Function**: `createBudgetBaselineChart(canvasId, housingBudget, totalBudget, creditByMonth, cashByMonth, discretionaryActual, classified, budgetYear)`
 
-All credit card spending — baseline recurring (groceries, dining, subscriptions) and discretionary one-offs — flows through the same accounts. Some discretionary items may also be partially paid in cash (e.g. contractor checks for renovations). Transaction-level categorization is off the table.
+### What it shows
 
-The fundamental accounting identity:
+A line chart with two series:
+- **target** — dashed line (`classified.textSubtle`), straight from $0 to `totalBudget` across 12 months
+- **actual** — solid line (`classified.accent`), cumulative monthly actual baseline spending; `null` for future months
+
+### Baseline estimate formula (per month)
 
 ```
-total_spending = baseline_credit + baseline_cash + discretionary_credit + discretionary_cash
+actual[m] = housing_cumulative[m] + credit_cumulative[m] + cash_cumulative[m] − discretionary_prorated[m]
 ```
 
-We know:
-- `total_credit` from `credit.csv` — captures `baseline_credit + discretionary_credit`
-- `total_discretionary` from manually tracked `value` fields — captures `discretionary_credit + discretionary_cash`
-- `explicit_non_credit_baseline` — items like mortgage paid by ACH — must be manually tracked
+Where:
+- `housing_cumulative[m]` = `housingBudget / 12 × (m + 1)` — assumed paid evenly (fixed monthly cost)
+- `credit_cumulative[m]` = sum of `creditByMonth[0..m]` (absolute values from `credit.csv`)
+- `cash_cumulative[m]` = sum of `cashByMonth[0..m]` (absolute values from `cash_spending.csv`)
+- `discretionary_prorated[m]` = `discretionaryActual × (m + 1) / (currentMonthIdx + 1)` — YTD total spread evenly across months with data
 
-The estimation gap is `discretionary_cash`: cash spending on discretionary items is included in `total_discretionary` (the user tracks it) but not in `total_credit` or `explicit_non_credit_baseline`. Subtracting discretionary from total would undercount baseline by that amount.
+The subtraction of prorated discretionary removes the portion of credit/cash spending that is discretionary (already tracked separately), leaving the baseline estimate.
 
-### Closing the gap with `cash_spending.csv`
+### Current month determination
 
-In practice, true cash outflows (checks, Venmo, wire transfers for actual spending) are rare and typically large. The vast majority of cash movements are mechanical: income deposits, credit card bill payments, mortgage ACH, and inter-account transfers — none of which are spending.
+```js
+currentMonthIdx = today.getFullYear() > budgetYearInt ? 11       // past year: full year
+                : today.getFullYear() < budgetYearInt ? -1       // future year: no data
+                : today.getMonth()                                // current year: up to today
+```
 
-A new `cash_spending.csv` file catalogs the occasional material cash spending transaction that would otherwise fall through the accounting. Small or infrequent omissions are acceptable; the goal is to keep the error well under 0.5% of total spending.
+Months after `currentMonthIdx` are `null` in the actual dataset.
 
-Same format as `credit.csv`: columns `date, account, value` with negative values for spending (e.g. `-8500` means $8,500 spent). The `account` field is a free-text label (e.g. `contractor — kitchen`, `venmo — ski trip`).
+### Tooltip
+
+Shows breakdown per month (actual series only):
+```
+credit: $Xk
+cash: $Xk
+housing: $Xk
+− discretionary: $Xk
+total: $Xk
+```
+
+### `budget.yaml` baseline schema
+
+Baseline section uses array format (same as discretionary), with optional `is_credit` flag:
+
+```yaml
+spending:
+  baseline:
+    - name: housing
+      budget: 31000
+      # no value — assumed paid evenly (housingBudget / 12 per month)
+    - name: other
+      budget: 90000
+      is_credit: true    # actual computed from credit.csv YTD — no manual entry
+  discretionary:
+    - name: honeymoon
+      budget: 8000
+      value: 4387
+```
+
+`computeBudgetSpending()` handles the array form for both sections. `is_credit: true` items get `spent: 0` initially; `dashboard.js` substitutes the real credit YTD after computing it from the raw EventData.
+
+For backward compatibility, a flat-dict baseline is still supported (each entry becomes `{ budget: value, spent: value }`).
+
+The chart uses only `housingBudget` (from `baseline.items['housing'].budget`) and `totalBudget` (sum of all baseline budgets). It does not use the per-item `spent` fields directly.
+
+---
+
+## `cash_spending.csv`
+
+**Purpose**: catalogs rare large cash outlays (checks, Venmo, wires) for actual spending that would otherwise fall through the accounting.
+
+**Format**: same as `credit.csv` — columns `date, account, value`, negative values for spending.
 
 ```csv
 date,account,value
@@ -106,111 +203,21 @@ date,account,value
 2026-01-10,venmo — ski trip split,-340
 ```
 
-This file lives in `data/cash_spending.csv`. Because the format matches `credit.csv`, it is loaded and parsed by the same `EventData` path in `dataLoader.js` — no new parser needed.
+**What goes here**: one-off cash payments for discretionary items (contractor checks, Venmo splits for tracked trips).
 
-### Updated formula
+**What does NOT go here**: credit card bill payments (captured in `credit.csv`), mortgage/rent (captured as budget baseline items), transfers between own accounts, income deposits.
 
-```
-total_actual = total_credit + explicit_non_credit_baseline + cash_spending_ytd
-baseline_estimate = total_actual − total_discretionary_actual
-```
+**Loading**: `CONFIG.dataPaths.cashSpending` → loaded as `EventData` in `dataLoader.js` → stored as `this.cashSpendingData` in `dashboard.js`.
 
-Because `cash_spending.csv` captures the discretionary-cash items that `total_discretionary` accounts for but `total_credit` misses, the estimation closes cleanly — residual error is only from omitted small transactions.
-
-### `budget.yaml` baseline schema change
-
-Change the baseline section from a flat dict to an array (matching discretionary), adding optional `value` and `is_credit` flag:
-
-```yaml
-# Current (budget only, flat dict):
-spending:
-  baseline:
-    credit_card: 90000
-    mortgage: 31000
-
-# Proposed (budget + actual, array):
-spending:
-  baseline:
-    - name: credit card
-      budget: 90000
-      is_credit: true       # actual is computed from credit.csv YTD — no value field
-    - name: mortgage
-      budget: 31000
-      value: 18000          # manually tracked YTD (ACH payments)
-  discretionary:
-    - name: renovations
-      budget: 100000
-      value: 47000          # total actual (credit + contractor cash combined)
-    ...
-```
-
-The `credit card` baseline item is special: its actual comes from `credit.csv` total for the year, not a manual entry. All other non-`is_credit` baseline items need `value` entries updated periodically.
-
-### Chart design
-
-Grouped comparison: budget bar (outline) + actual bar (filled), one group per baseline category. Summary row at bottom:
-
-```
-credit card    [====budget====|  ]  $67k / $90k budget  (from credit.csv YTD)
-mortgage       [======|           ]  $18k / $31k budget  (manual)
-─────────────────────────────────────────────────────────
-total baseline [====estimated====|  ]  $85k / $121k
-```
-
-The total baseline row uses the formula above (credit + non-credit baseline + cash_spending YTD − total discretionary actual). No qualifier needed — the estimate is now materially accurate.
-
-### Computing credit YTD
-
-A new helper sums credit spending from January through the current month of the budget year:
-
-```js
-function creditYTDForYear(creditMonthly, year) {
-    return creditMonthly
-        .filter(d => d.month.startsWith(year))
-        .reduce((sum, d) => sum + Math.abs(d.value), 0);
-}
-```
-
-`creditMonthly` is the same monthly array already used for `creditSpendingChart`.
-
-### `computeBudgetSpending()` migration
-
-Update to handle baseline as array (like discretionary) in addition to the current flat-dict form. Items come out with the same shape:
-
-```js
-items: {
-  "credit card": { budget: 90000, spent: <credit_ytd>, is_credit: true },
-  "mortgage":    { budget: 31000, spent: 18000 },
-}
-```
-
-For backward compatibility during migration: if baseline is still a flat dict, treat each entry as `{ budget: value, spent: value }` (fully committed, no `is_credit`).
-
-### New data loading
-
-Add `cash_spending.csv` to `CONFIG.dataPaths` and load it in `dataLoader.js` as an `EventData` source. Compute `cashSpendingYTD` in `dashboard.js` by filtering to the budget year and summing `Math.abs(value)`.
-
-### Implementation notes
-
-- New file: `web/js/chart-budgetBaseline.js`, function `createBudgetBaselineChart(canvasId, baselineItems, totalBaselineEstimate, classified)`
-- Colors: budget bar `classified.backgroundAlt`; actual bar `classified.chart2`; overrun `classified.chartWarn`
-- If `value` is absent on a non-`is_credit` item: bar shows zero with a muted "not tracked" label in `textSubtle`
-- Prorating: apply same day-of-year fraction to budget amounts for the reference target line
+`computeCashSpendingYTD(cashSpendingRows, year)` sums `Math.abs(value)` for rows in the given calendar year. Used for the baseline spending heading and stored as `budgetData[year].cashSpendingYTD`.
 
 ---
 
-## New File: `data/cash_spending.csv`
+## Heading Calculations
 
-**What goes here**: one-off checks or Venmo payments for discretionary items (e.g. paying a contractor for renovation work), rare large cash outflows with no other tracking home.
-
-**What does NOT go here**: credit card bill payments (captured in `credit.csv`), mortgage and other recurring baseline items (captured as `budget.yaml` baseline items with `value` fields), transfers between own accounts (not spending), income deposits.
-
----
-
-## Implementation Order
-
-1. Add `cash_spending.csv` to `CONFIG.dataPaths` and load in `dataLoader.js`
-2. Migrate `budget.yaml` baseline section to array format
-3. Update `computeBudgetSpending()` to handle array baseline + `is_credit` flag
-4. Build Chart 1 (progress) — no schema changes needed beyond what's already in `budgetData`
-5. Build Chart 2 (baseline) — depends on steps 2–3
+| Heading | Formula |
+|---------|---------|
+| `cashflow ($Xk gross)` | `budgetData[yr].income.total` |
+| `savings goals ($X/$X)` | `sum(by_category[*].value)` / `sum(by_category[*].goal)` |
+| `discretionary spending goals ($X/$X)` | `sum(items[*].spent)` / `sum(items[*].budget)` for discretionary section |
+| `baseline spending goal ($X/$X)` | `(creditYTD + cashSpendingYTD − discretionaryActual)` / `sum(baseline items[*].budget)` |
