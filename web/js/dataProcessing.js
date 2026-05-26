@@ -458,11 +458,14 @@ function categorizeAccount(account) {
 function computeBudgetSavings(savingsEntries) {
     const byCategory = {};
     let total = 0;
+    let totalGoal = 0;
 
     for (const entry of savingsEntries) {
         const path = (entry.account || '').trim();
         const value = entry.value || 0;
-        total += value;
+        const goal  = entry.goal  || 0;
+        total     += value;
+        totalGoal += goal;
 
         const parts = path.toLowerCase().replace(/^\//, '').split('/');
         const hasRoth = parts.includes('roth');
@@ -472,10 +475,12 @@ function computeBudgetSavings(savingsEntries) {
         else if (parts.includes('ira'))  category = hasRoth ? 'roth ira' : 'ira';
         else                             category = 'taxable';
 
-        byCategory[category] = (byCategory[category] || 0) + value;
+        if (!byCategory[category]) byCategory[category] = { goal: 0, value: 0 };
+        byCategory[category].value += value;
+        byCategory[category].goal  += goal;
     }
 
-    return { total, by_category: byCategory };
+    return { total, totalGoal, by_category: byCategory };
 }
 
 /**

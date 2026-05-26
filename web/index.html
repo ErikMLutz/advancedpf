@@ -962,20 +962,34 @@
                         </h2>
                         <p class="text-xl font-light"
                            :style="`color: ${theme ? theme.classified.textSubtle : textColor};`"
-                           x-text="budgetData ? Object.keys(budgetData).sort().pop() + ' income' : ''"></p>
+                           x-text="budgetData ? (() => { const yr = Object.keys(budgetData).sort().pop(); return budgetData[yr]?.income ? 'cashflow ($' + fmtK(budgetData[yr].income.total, 1) + 'k gross)' : 'cashflow'; })() : ''"></p>
                     </div>
-                    <p class="text-sm font-light mb-4"
-                       :style="`color: ${theme ? theme.classified.textSubtle : textColor};`"
-                       x-show="budgetData"
-                       x-text="budgetData ? (() => { const yr = Object.keys(budgetData).sort().pop(); return budgetData[yr]?.income ? '$' + fmtK(budgetData[yr].income.total, 1) + 'k gross' : ''; })() : ''"></p>
                     <div style="position: relative; height: 550px; width: 100%;">
                         <canvas id="budgetIncomeSankeyChart"></canvas>
                     </div>
-                    <div style="display:flex; gap:1rem; width:100%; margin-top:1rem;">
-                        <div style="flex:1; min-width:0; position:relative; height:400px;">
-                            <canvas id="budgetProgressChart"></canvas>
+                    <div style="display:flex; gap:1rem; width:100%; margin-top:2rem;">
+                        <div style="flex:1; min-width:0;">
+                            <p class="text-xl font-light mb-2"
+                               :style="`color: ${theme ? theme.classified.textSubtle : textColor};`"
+                               x-text="(() => { const yr = Object.keys(budgetData).sort().pop(); const cats = Object.values(budgetData[yr]?.savings?.by_category || {}); const actual = cats.reduce((s,c) => s+(c.value||0),0); const goal = cats.reduce((s,c) => s+(c.goal||0),0); return `savings goals ($${fmtK(actual,0)}k / $${fmtK(goal,0)}k)`; })()">savings goals</p>
+                            <div style="position:relative; height:300px;">
+                                <canvas id="budgetSavingsProgressChart"></canvas>
+                            </div>
                         </div>
-                        <div style="flex:1; min-width:0; position:relative; height:400px;">
+                        <div style="flex:1; min-width:0;">
+                            <p class="text-xl font-light mb-2"
+                               :style="`color: ${theme ? theme.classified.textSubtle : textColor};`"
+                               x-text="(() => { const yr = Object.keys(budgetData).sort().pop(); const items = Object.values(budgetData[yr]?.spending?.sections?.discretionary?.items || {}); const actual = items.reduce((s,i) => s+(i.spent||0),0); const goal = items.reduce((s,i) => s+(i.budget||0),0); return `discretionary spending goals ($${fmtK(actual,0)}k / $${fmtK(goal,0)}k)`; })()">discretionary spending goals</p>
+                            <div style="position:relative; height:300px;">
+                                <canvas id="budgetSpendingProgressChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-8">
+                        <p class="text-xl font-light mb-2"
+                           :style="`color: ${theme ? theme.classified.textSubtle : textColor};`"
+                           x-text="(() => { const yr = Object.keys(budgetData).sort().pop(); const items = Object.values(budgetData[yr]?.spending?.sections?.baseline?.items || {}); const goal = items.reduce((s,i) => s+(i.budget||0),0); const actual = (budgetData[yr]?.creditYTD||0) + (budgetData[yr]?.cashSpendingYTD||0) - Object.values(budgetData[yr]?.spending?.sections?.discretionary?.items||{}).reduce((s,i)=>s+(i.spent||0),0); return `baseline spending goal ($${fmtK(Math.round(actual),0)}k / $${fmtK(goal,0)}k)`; })()">baseline spending goal</p>
+                        <div style="position:relative; height:300px;">
                             <canvas id="budgetBaselineChart"></canvas>
                         </div>
                     </div>

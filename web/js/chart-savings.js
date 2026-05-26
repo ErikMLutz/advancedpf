@@ -56,7 +56,7 @@ function createSavingsChart(canvasId, data, classified, savingsRates = [], proje
         ];
 
         allCategories.forEach((category, i) => {
-            const planned = projectedSavings.by_category[category] || 0;
+            const planned = projectedSavings.by_category[category]?.goal ?? projectedSavings.by_category[category] ?? 0;
             const actualDs = data.datasets.find(ds => ds.category === category);
             const actual = actualDs ? (actualDs.data[projectedIdx] || 0) : 0;
             const remaining = Math.max(0, planned - actual);

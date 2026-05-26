@@ -1,15 +1,17 @@
-// Budget Baseline Chart
-// Horizontal grouped bar: budget (outline) vs actual (filled) per baseline line item
+// Budget Baseline Spending Chart
+// Line chart: combined actual baseline (housing + other) vs straight-line target
 
 /**
  * @param {string} canvasId
- * @param {Object} baselineItems          - { [label]: { budget, spent, is_credit? } }
- * @param {number} totalDiscretionaryActual - sum of all discretionary item.spent values
- * @param {number} cashSpendingYTD        - YTD total from cash_spending.csv
+ * @param {number} housingBudget        - annual housing budget
+ * @param {number} totalBudget          - total annual baseline budget
+ * @param {number[]} creditByMonth      - 12-element array, abs credit spending per month
+ * @param {number[]} cashByMonth        - 12-element array, abs cash spending per month
+ * @param {number} discretionaryActual  - YTD total discretionary (spread evenly across months)
  * @param {Object} classified
- * @param {string} budgetYear             - e.g. "2026"
+ * @param {string} budgetYear           - e.g. "2026"
  */
-function createBudgetBaselineChart(canvasId, baselineItems, totalDiscretionaryActual, cashSpendingYTD, classified, budgetYear) {
+function createBudgetBaselineChart(canvasId, housingBudget, totalBudget, creditByMonth, cashByMonth, discretionaryActual, classified, budgetYear) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
 
@@ -17,197 +19,119 @@ function createBudgetBaselineChart(canvasId, baselineItems, totalDiscretionaryAc
         window.budgetBaselineChart.destroy();
     }
 
-    // Day-of-year fraction for prorated reference line
-    const today = new Date();
     const budgetYearInt = parseInt(budgetYear);
-    let fraction;
-    if (today.getFullYear() > budgetYearInt) {
-        fraction = 1.0;
-    } else if (today.getFullYear() < budgetYearInt) {
-        fraction = 0;
-    } else {
-        const startOfYear = new Date(budgetYearInt, 0, 1);
-        const startOfNextYear = new Date(budgetYearInt + 1, 0, 1);
-        const daysInYear = (startOfNextYear - startOfYear) / 86400000;
-        const dayOfYear = (today - startOfYear) / 86400000 + 1;
-        fraction = Math.min(dayOfYear / daysInYear, 1.0);
+    const today = new Date();
+    const currentMonthIdx = today.getFullYear() > budgetYearInt ? 11
+        : today.getFullYear() < budgetYearInt ? -1
+        : today.getMonth();
+
+    const monthLabels = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+
+    // Target: straight line $0 → totalBudget across 12 months
+    const targetData = monthLabels.map((_, m) => Math.round(totalBudget / 12 * (m + 1)));
+
+    // Actual: cumulative monthly — housing (even) + credit + cash − discretionary (prorated evenly)
+    const actualData = [];
+    const tooltipComponents = []; // { housing, credit, cash, disc } per month
+    let cumCredit = 0;
+    let cumCash = 0;
+    for (let m = 0; m < 12; m++) {
+        if (currentMonthIdx < 0 || m > currentMonthIdx) {
+            actualData.push(null);
+            tooltipComponents.push(null);
+        } else {
+            cumCredit += creditByMonth[m] || 0;
+            cumCash += cashByMonth[m] || 0;
+            const housingCum = Math.round(housingBudget / 12 * (m + 1));
+            const discProrated = Math.round(discretionaryActual * (m + 1) / (currentMonthIdx + 1));
+            actualData.push(housingCum + cumCredit + cumCash - discProrated);
+            tooltipComponents.push({
+                housing: housingCum,
+                credit: Math.round(cumCredit),
+                cash: Math.round(cumCash),
+                disc: discProrated,
+            });
+        }
     }
 
-    const entries = Object.entries(baselineItems);
-
-    // Compute summary row values
-    const totalSpentItems = entries.reduce((sum, [, item]) => sum + (item.spent || 0), 0);
-    const totalActual = totalSpentItems + cashSpendingYTD;
-    const baselineEstimate = totalActual - totalDiscretionaryActual;
-    const baselineBudget = entries.reduce((sum, [, item]) => sum + (item.budget || 0), 0);
-
-    // Build display labels and row data including separator + summary
-    const labels = [];
-    const budgetValues = [];
-    const actualValues = [];
-    const actualColors = [];
-    const notTracked = []; // booleans: true if item has no tracked value
-
-    entries.forEach(([label, item]) => {
-        labels.push(label);
-        budgetValues.push(item.budget || 0);
-
-        const isTracked = item.is_credit === true || (item.spent !== undefined && item.spent > 0);
-        notTracked.push(!isTracked);
-
-        const spent = item.spent || 0;
-        actualValues.push(isTracked ? spent : 0);
-        const overrun = isTracked && spent > (item.budget || 0);
-        actualColors.push(overrun ? classified.chartWarn : classified.chart2);
-    });
-
-    // Separator row
-    labels.push('');
-    budgetValues.push(0);
-    actualValues.push(0);
-    actualColors.push('transparent');
-    notTracked.push(false);
-
-    // Summary row
-    labels.push('est. baseline total');
-    budgetValues.push(baselineBudget);
-    actualValues.push(baselineEstimate);
-    const summaryOverrun = baselineEstimate > baselineBudget;
-    actualColors.push(summaryOverrun ? classified.chartWarn : classified.chart2);
-    notTracked.push(false);
-
-    // Prorated reference line plugin
-    const proratedLinePlugin = {
-        id: 'budgetBaselineProratedLine',
-        afterDraw(chart) {
-            const { ctx: c, chartArea, scales } = chart;
-            if (!scales.x) return;
-
-            c.save();
-            c.setLineDash([4, 4]);
-            c.strokeStyle = classified.textSubtle;
-            c.lineWidth = 1;
-            c.globalAlpha = 0.6;
-
-            labels.forEach((label, i) => {
-                if (label === '') return;
-                // Find the budget for this row to compute prorated value
-                const budget = budgetValues[i];
-                const proratedX = scales.x.getPixelForValue(budget * fraction);
-                const meta = chart.getDatasetMeta(0);
-                if (!meta.data[i]) return;
-                const barY = meta.data[i].y;
-                const halfHeight = meta.data[i].height / 2 + 2;
-                c.beginPath();
-                c.moveTo(proratedX, barY - halfHeight);
-                c.lineTo(proratedX, barY + halfHeight);
-                c.stroke();
-            });
-
-            c.restore();
-        }
-    };
-
-    // "not tracked" label plugin
-    const notTrackedPlugin = {
-        id: 'budgetBaselineNotTracked',
-        afterDraw(chart) {
-            const { ctx: c, scales } = chart;
-            if (!scales.x) return;
-            c.save();
-            c.font = `italic 10px sans-serif`;
-            c.fillStyle = classified.textSubtle;
-            c.textAlign = 'left';
-            c.textBaseline = 'middle';
-
-            notTracked.forEach((isUntracked, i) => {
-                if (!isUntracked) return;
-                const meta = chart.getDatasetMeta(1); // actual bars dataset
-                if (!meta.data[i]) return;
-                const bar = meta.data[i];
-                const zeroX = scales.x.getPixelForValue(0);
-                c.fillText('not tracked', zeroX + 4, bar.y);
-            });
-
-            c.restore();
-        }
-    };
-
     window.budgetBaselineChart = new Chart(ctx, {
-        type: 'bar',
-        plugins: [proratedLinePlugin, notTrackedPlugin],
+        type: 'line',
         data: {
-            labels,
+            labels: monthLabels,
             datasets: [
                 {
-                    label: 'budget',
-                    data: budgetValues,
-                    backgroundColor: 'transparent',
-                    borderColor: classified.backgroundAlt,
-                    borderWidth: 2,
-                    borderSkipped: false,
-                    barPercentage: 0.8,
-                    categoryPercentage: 0.9,
+                    label: 'target',
+                    data: targetData,
+                    borderColor: classified.textSubtle,
+                    borderWidth: 1.5,
+                    borderDash: [6, 4],
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0,
                 },
                 {
                     label: 'actual',
-                    data: actualValues,
-                    backgroundColor: actualColors,
-                    borderWidth: 0,
-                    barPercentage: 0.5,
-                    categoryPercentage: 0.9,
-                }
+                    data: actualData,
+                    borderColor: classified.accent,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointBackgroundColor: classified.accent,
+                    pointHitRadius: 8,
+                    fill: false,
+                    tension: 0,
+                    spanGaps: false,
+                },
             ]
         },
         options: {
-            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
-            layout: { padding: { right: 20 } },
             scales: {
                 x: {
-                    stacked: false,
-                    display: false,
                     grid: { display: false },
+                    ticks: { color: classified.textSubtle, font: { size: 11 } },
+                    border: { display: false },
                 },
                 y: {
-                    grid: { display: false },
+                    grid: { color: classified.backgroundAlt },
                     ticks: {
-                        color: classified.text,
+                        color: classified.textSubtle,
                         font: { size: 11 },
+                        callback: v => '$' + fmtK(v) + 'k',
                     },
                     border: { display: false },
                 }
             },
             plugins: {
-                legend: { display: false },
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: { color: classified.textSubtle, font: { size: 11 }, boxWidth: 12 }
+                },
                 tooltip: {
-                    callbacks: {
-                        title(items) {
-                            return items[0]?.label || '';
-                        },
-                        label(item) {
-                            const i = item.dataIndex;
-                            if (labels[i] === '') return null;
-                            const budget = budgetValues[i];
-                            const actual = actualValues[i];
-                            const proratedBudget = budget * fraction;
-                            if (item.datasetIndex === 0) {
-                                return [
-                                    `budget: $${fmtK(budget)}k`,
-                                    `prorated: $${fmtK(proratedBudget)}k`,
-                                ];
-                            }
-                            return `actual: $${fmtK(actual)}k`;
-                        },
-                        filter(item) {
-                            const i = item.dataIndex;
-                            return labels[i] !== '';
-                        }
-                    },
-                    backgroundColor: classified.backgroundAlt,
+                    backgroundColor: classified.background,
                     titleColor: classified.text,
-                    bodyColor: classified.textSubtle,
+                    bodyColor: classified.text,
+                    borderColor: classified.backgroundAlt,
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: true,
+                    callbacks: {
+                        label(item) {
+                            if (item.datasetIndex === 0) {
+                                return `target: $${fmtK(item.parsed.y)}k`;
+                            }
+                            const c = tooltipComponents[item.dataIndex];
+                            if (!c) return null;
+                            return [
+                                `credit: $${fmtK(c.credit)}k`,
+                                `cash: $${fmtK(c.cash)}k`,
+                                `housing: $${fmtK(c.housing)}k`,
+                                `− discretionary: $${fmtK(c.disc)}k`,
+                                `total: $${fmtK(item.parsed.y)}k`,
+                            ];
+                        }
+                    }
                 }
             }
         }

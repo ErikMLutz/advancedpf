@@ -40,7 +40,7 @@ function createBudgetIncomeSankeyChart(canvasId, income, savings, spending, taxe
             flow: income[k], _color: incomeSourceColors[label]
         }));
 
-    const savingsTotal  = savings?.total  || 0;
+    const savingsTotal  = savings?.totalGoal ?? savings?.total ?? 0;
     const spendingTotal = spending?.total || 0;
     const taxesTotal    = taxes?.total    || 0;
     const unaccounted   = income.total - savingsTotal - spendingTotal - taxesTotal;
@@ -59,8 +59,9 @@ function createBudgetIncomeSankeyChart(canvasId, income, savings, spending, taxe
             _color: classified.accent
         });
         Object.entries(savings.by_category).forEach(([cat, val], i) => {
-            if (val <= 0) return;
-            flows.push({ from: 'savings', to: cat, flow: val, _color: chartColors[i % 5] });
+            const flow = val?.goal ?? val;
+            if (!(flow > 0)) return;
+            flows.push({ from: 'savings', to: cat, flow, _color: chartColors[i % 5] });
         });
     }
 

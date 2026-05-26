@@ -544,7 +544,7 @@ document.addEventListener('alpine:init', () => {
                             projectedSavings = {
                                 year: latestBudgetYear,
                                 by_category: yearData.savings.by_category,
-                                total: yearData.savings.total,
+                                total: yearData.savings.totalGoal,
                                 projectedIncome: yearData.income?.total || null
                             };
                             // Ensure projected year appears in filteredSavings (it may have no savings.csv data yet)
@@ -664,28 +664,64 @@ document.addEventListener('alpine:init', () => {
                         );
                     }
 
-                    // Budget progress chart (savings + discretionary vs prorated targets)
-                    if (latestData?.savings && this.savingsData) {
-                        createBudgetProgressChart(
-                            'budgetProgressChart',
-                            latestData,
-                            this.savingsData,
-                            this.theme.classified,
-                            latestYear
-                        );
+                    // Savings progress chart
+                    if (latestData?.savings) {
+                        const savingsRows = Object.entries(latestData.savings.by_category || {}).map(([category, item]) => ({
+                            label: category,
+                            annualBudget: item.goal  || 0,
+                            actual:       item.value || 0,
+                            type: 'savings',
+                        }));
+                        createBudgetProgressChart('budgetSavingsProgressChart', savingsRows, this.theme.classified);
                     }
 
-                    // Budget baseline chart (baseline spending actual vs budget)
+                    // Spending progress chart
+                    const discItems = latestData?.spending?.sections?.discretionary?.items || {};
+                    if (Object.keys(discItems).length > 0) {
+                        const spendingRows = Object.entries(discItems).map(([label, item]) => ({
+                            label, annualBudget: item.budget || 0, actual: item.spent || 0, type: 'discretionary'
+                        }));
+                        createBudgetProgressChart('budgetSpendingProgressChart', spendingRows, this.theme.classified);
+                    }
+
+                    // Budget baseline chart (line: combined actual vs straight-line target)
                     const baselineItems = latestData?.spending?.sections?.baseline?.items;
                     if (baselineItems) {
+                        const housingBudget = baselineItems['housing']?.budget || 0;
+                        const totalBudget = Object.values(baselineItems)
+                            .reduce((s, v) => s + (v.budget || 0), 0);
+
                         const totalDiscretionaryActual = Object.values(
                             latestData?.spending?.sections?.discretionary?.items || {}
                         ).reduce((sum, item) => sum + (item.spent || 0), 0) || 0;
+
+                        // Monthly credit spending for budget year
+                        const creditByMonth = new Array(12).fill(0);
+                        (this.creditSpendingData || [])
+                            .filter(d => d.month.startsWith(latestYear))
+                            .forEach(d => {
+                                const m = parseInt(d.month.split('-')[1]) - 1;
+                                creditByMonth[m] = Math.abs(d.value);
+                            });
+
+                        // Monthly cash spending for budget year
+                        const cashByMonth = new Array(12).fill(0);
+                        if (this.cashSpendingData) {
+                            this.cashSpendingData.valueByMonth(48)
+                                .filter(d => d.month.startsWith(latestYear))
+                                .forEach(d => {
+                                    const m = parseInt(d.month.split('-')[1]) - 1;
+                                    cashByMonth[m] = Math.abs(d.value);
+                                });
+                        }
+
                         createBudgetBaselineChart(
                             'budgetBaselineChart',
-                            baselineItems,
+                            housingBudget,
+                            totalBudget,
+                            creditByMonth,
+                            cashByMonth,
                             totalDiscretionaryActual,
-                            latestData.cashSpendingYTD || 0,
                             this.theme.classified,
                             latestYear
                         );
