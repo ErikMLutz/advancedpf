@@ -513,21 +513,21 @@ function computeBudgetSpending(spendingData) {
         let sectionSpent = 0;
         const items = {};
 
-        if (Array.isArray(raw)) {
-            // Array form: [{ name, budget, value?, is_credit? }]
-            // Used for both discretionary and new-format baseline.
+        if (typeof raw === 'number') {
+            // Scalar form: baseline: 90000 — single budget, no line items
+            sectionTotal = raw;
+        } else if (Array.isArray(raw)) {
+            // Array form: [{ name, budget, value? }]
             for (const entry of raw) {
-                const label    = entry.name || '';
-                const budget   = entry.budget || 0;
-                const isCredit = entry.is_credit === true;
-                // is_credit items: spent filled in later by dashboard from credit YTD
-                const spent    = isCredit ? 0 : (entry.value || 0);
-                items[label] = { budget, spent, ...(isCredit ? { is_credit: true } : {}) };
+                const label  = entry.name || '';
+                const budget = entry.budget || 0;
+                const spent  = entry.value || 0;
+                items[label] = { budget, spent };
                 sectionTotal += budget;
                 sectionSpent += spent;
             }
         } else {
-            // Baseline: flat key→value dict (fully committed, spent = budget)
+            // Flat dict form (legacy): { key: value } — fully committed
             for (const [key, value] of Object.entries(raw || {})) {
                 const label = key.replace(/_/g, ' ');
                 items[label] = { budget: value, spent: value };

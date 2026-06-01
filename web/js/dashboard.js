@@ -381,20 +381,6 @@ document.addEventListener('alpine:init', () => {
 
                                 this.budgetData[year].creditYTD = creditYTD;
                                 this.budgetData[year].cashSpendingYTD = cashSpendingYTD;
-
-                                // Substitute real credit YTD into the is_credit baseline item
-                                const baselineItems = this.budgetData[year].spending?.sections?.baseline?.items;
-                                if (baselineItems) {
-                                    for (const item of Object.values(baselineItems)) {
-                                        if (item.is_credit === true) {
-                                            item.spent = creditYTD;
-                                        }
-                                    }
-                                    // Also update the section's spent total to reflect substitution
-                                    const baselineSection = this.budgetData[year].spending.sections.baseline;
-                                    baselineSection.spent = Object.values(baselineItems)
-                                        .reduce((sum, item) => sum + item.spent, 0);
-                                }
                             }
                         }
                     } else {
@@ -685,12 +671,8 @@ document.addEventListener('alpine:init', () => {
                     }
 
                     // Budget baseline chart (line: combined actual vs straight-line target)
-                    const baselineItems = latestData?.spending?.sections?.baseline?.items;
-                    if (baselineItems) {
-                        const housingBudget = baselineItems['housing']?.budget || 0;
-                        const totalBudget = Object.values(baselineItems)
-                            .reduce((s, v) => s + (v.budget || 0), 0);
-
+                    const baselineTotal = latestData?.spending?.sections?.baseline?.total;
+                    if (baselineTotal > 0) {
                         const totalDiscretionaryActual = Object.values(
                             latestData?.spending?.sections?.discretionary?.items || {}
                         ).reduce((sum, item) => sum + (item.spent || 0), 0) || 0;
@@ -704,7 +686,7 @@ document.addEventListener('alpine:init', () => {
                                 creditByMonth[m] = Math.abs(d.value);
                             });
 
-                        // Monthly cash spending for budget year
+                        // Monthly cash spending for budget year (includes mortgage)
                         const cashByMonth = new Array(12).fill(0);
                         if (this.cashSpendingData) {
                             this.cashSpendingData.valueByMonth(48)
@@ -717,8 +699,7 @@ document.addEventListener('alpine:init', () => {
 
                         createBudgetBaselineChart(
                             'budgetBaselineChart',
-                            housingBudget,
-                            totalBudget,
+                            baselineTotal,
                             creditByMonth,
                             cashByMonth,
                             totalDiscretionaryActual,

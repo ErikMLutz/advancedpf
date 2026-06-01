@@ -3,15 +3,14 @@
 
 /**
  * @param {string} canvasId
- * @param {number} housingBudget        - annual housing budget
  * @param {number} totalBudget          - total annual baseline budget
  * @param {number[]} creditByMonth      - 12-element array, abs credit spending per month
- * @param {number[]} cashByMonth        - 12-element array, abs cash spending per month
+ * @param {number[]} cashByMonth        - 12-element array, abs cash spending per month (includes mortgage)
  * @param {number} discretionaryActual  - YTD total discretionary (spread evenly across months)
  * @param {Object} classified
  * @param {string} budgetYear           - e.g. "2026"
  */
-function createBudgetBaselineChart(canvasId, housingBudget, totalBudget, creditByMonth, cashByMonth, discretionaryActual, classified, budgetYear) {
+function createBudgetBaselineChart(canvasId, totalBudget, creditByMonth, cashByMonth, discretionaryActual, classified, budgetYear) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
 
@@ -42,11 +41,9 @@ function createBudgetBaselineChart(canvasId, housingBudget, totalBudget, creditB
         } else {
             cumCredit += creditByMonth[m] || 0;
             cumCash += cashByMonth[m] || 0;
-            const housingCum = Math.round(housingBudget / 12 * (m + 1));
             const discProrated = Math.round(discretionaryActual * (m + 1) / (currentMonthIdx + 1));
-            actualData.push(housingCum + cumCredit + cumCash - discProrated);
+            actualData.push(Math.round(cumCredit + cumCash - discProrated));
             tooltipComponents.push({
-                housing: housingCum,
                 credit: Math.round(cumCredit),
                 cash: Math.round(cumCash),
                 disc: discProrated,
@@ -126,7 +123,6 @@ function createBudgetBaselineChart(canvasId, housingBudget, totalBudget, creditB
                             return [
                                 `credit: $${fmtK(c.credit)}k`,
                                 `cash: $${fmtK(c.cash)}k`,
-                                `housing: $${fmtK(c.housing)}k`,
                                 `− discretionary: $${fmtK(c.disc)}k`,
                                 `total: $${fmtK(item.parsed.y)}k`,
                             ];
