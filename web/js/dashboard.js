@@ -150,9 +150,19 @@ document.addEventListener('alpine:init', () => {
                         const monthData = source.valueByMonth(monthsDiff);
                         const dataPoint = monthData.find(d => d.month === month);
                         if (dataPoint) {
+                            if (!isFinite(dataPoint.value)) {
+                                console.warn(`[net worth] non-finite value in source "${source.sourceName}" for ${month}:`, dataPoint.value, dataPoint);
+                            }
                             total += dataPoint.value;
                         }
                     });
+                    if (!isFinite(total)) {
+                        console.error(`[net worth] NaN/Infinity total for ${month} — per-source breakdown:`);
+                        sources.forEach(source => {
+                            const dp = source.valueByMonth(monthsDiff).find(d => d.month === month);
+                            console.error(`  ${source.sourceName}:`, dp?.value, dp);
+                        });
+                    }
                     return { month, value: total };
                 });
 
