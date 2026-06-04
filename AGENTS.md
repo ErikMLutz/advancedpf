@@ -34,14 +34,20 @@ Data Flow: CSV → dataLoader → dataProcessing → charts → display
 
 **web/js/dataLoader.js**: Loads all CSVs in parallel via Papa Parse. Parses dates, booleans. Returns `rawData` object.
 
-**web/js/dataProcessing.js**: Core logic — `SnapshotData`, `EventData`, `computeValueOverLast12Months()`, `computeAssetAllocation()`, `computeSavingsAllocation()`, `categorizeAccount()`.
+**web/js/dataProcessing.js**: Core logic — `SnapshotData`, `EventData`, `computeValueOverLast12Months()`, `computeAssetAllocation()`, `computeSavingsAllocation()`, `categorizeAccount()`, and many more (see Key Functions below).
 
 **web/js/chart-\*.js**: One file per chart. Each exports a single `create*Chart(canvasId, data, classified, ...)` function. Destroy previous chart instance before creating new one.
 
-**justfile**: Task runner (serve, generate-fake-data, load/save-real-data)
-**scripts/**: Data management (generate fake data, 1Password sync)
-**scripts/fetch-index-returns.py**: Fetches S&P 500 annual returns → `web/data/sp500_returns.json`. Run by `just serve`.
-**scripts/fetch-position-info.py**: Fetches expense ratio + dividend yield per ticker from Yahoo Finance → `web/data/position_info.json`. Run by `just serve` and whenever `positions.csv` tickers change.
+**justfile**: Task runner. Tasks: `serve`, `fetch-index-returns`, `generate-fake-data`, `load-real-data`, `save-real-data`, `generate-pdf`.
+**scripts/**: Data management scripts:
+- `fetch-all.py` — wrapper that calls all fetch scripts in sequence
+- `fetch-index-returns.py` — Fetches S&P 500 annual returns → `web/data/sp500_returns.json`. Run by `just serve`.
+- `fetch-position-info.py` — Fetches expense ratio + dividend yield per ticker from Yahoo Finance → `web/data/position_info.json`. Run by `just serve` and whenever `positions.csv` tickers change.
+- `fetch-position-holdings.py` — Fetches underlying fund constituents + sector allocations → `web/data/position_holdings.json` and `web/data/position_sectors.json`.
+- `fetch-budget-data.py` — Fetches stock prices for RSU/ESPP income → `web/data/budget.json`.
+- `classify-theme.js` — Theme color classification utility (dev helper).
+- `generate-fake-data.js` — Generates fake CSV data for development.
+- `load-real-data.sh` / `save-real-data.sh` — Sync real data with 1Password.
 
 ## Data Model
 
@@ -62,6 +68,14 @@ Data Flow: CSV → dataLoader → dataProcessing → charts → display
 - **income.csv**: Annual income/tax breakdown (`year, total_income, federal_income_tax, state_income_tax, social_security, medicare`)
 - **savings.csv**: Annual savings contributions (`year, account, amount`; negative = withdrawal)
 - **positions.csv**: Point-in-time holdings (`date, account, position, value`). Infrequent snapshots; forward-filled. `position` is a ticker symbol (e.g. `FXAIX`).
+- **cash_spending.csv**: Cash spending transactions used for budget baseline tracking (YTD actuals vs. target).
+
+Generated data files (in `web/data/`, not committed):
+- `sp500_returns.json` — Annual S&P 500 returns (from `fetch-index-returns.py`)
+- `position_info.json` — Expense ratio + dividend yield per ticker (from `fetch-position-info.py`)
+- `position_holdings.json` — Underlying fund constituents per position (from `fetch-position-holdings.py`)
+- `position_sectors.json` — Sector allocations per position (from `fetch-position-holdings.py`)
+- `budget.json` — Python-computed stock-price-dependent income values (from `fetch-budget-data.py`)
 
 ### Processing Classes
 
@@ -71,20 +85,32 @@ Data Flow: CSV → dataLoader → dataProcessing → charts → display
 Both provide:
 - `valueByMonth(months)`: Aggregate by month
 - `valueByAccount()`: Current month by account
+- `valueByAccountByMonth(months)`: (SnapshotData only) per-account values by month
 - `changeByMonth(months)`: Month-over-month changes
 
 ### Key Functions
 
-- **computePositionsData(rawPositions, manifest)**: Latest forward-filled value per (account, position); splits into `{ retirement, nonRetirement }` arrays of `{ label, value }`.
+- **computePositionsData(rawPositions, manifest)**: Latest forward-filled value per (account, position); splits into `{ retirement, nonRetirement }` arrays of `{ label, value }` sorted by value descending.
+- **computePositionsByAccount(rawPositions)**: Latest forward-filled value per (account, position) keyed by account.
 - **computeValueOverLast12Months(sources)**: Combines sources, YoY comparison, 6-month rolling avg
 - **computeSavingsAllocation(rows, manifest)**: Splits positive (savings) from negative (withdrawals) rows *before* aggregation. Returns `{ years, datasets, withdrawals }`.
 - **computeAssetAllocation(sources, manifest)**: Asset breakdown by category for current month
-- **categorizeAccount(meta)**: Maps manifest metadata → category string (e.g. `'retirement securities'`)
+- **computePortfolioPerformance(sources, manifest, savingsRows)**: Estimated yearly rate of return per investment category. Formula: (end − start − contributions) / |start|.
+- **computeRetirementGrowth(sources, manifest, savingsRows)**: Cumulative contributions vs. total balance over time for retirement accounts.
+- **computeRetirementTaxAllocation(sources, manifest)**: Current retirement account balances grouped by tax treatment (roth/traditional/hsa).
+- **computeAccountsTable(sources, manifest, rawPositions)**: Current-month balance per account with metadata for the accounts table view.
+- **computeUnderlyingPositions(positionsData, positionHoldings)**: Expands positions into their underlying fund constituents using `position_holdings.json`.
+- **computeSectorPositions(positionsData, positionSectors)**: Aggregates position values by sector using `position_sectors.json`.
+- **computeProgressHistory(rawData, manifest)**: Monthly aggregate snapshots for the ProjectionLab API integration.
+- **categorizeAccount(account)**: Maps an account object `{type, retirement, primary_residence, investment_property}` → category string (e.g. `'retirement securities'`)
 - **computeBudgetSavings(entries)**: Categorizes budget savings by account path → tax-treatment label
 - **computeBudgetSpending(data)**: Normalizes baseline dict + discretionary array into `{ total, sections }`
 - **computeBudgetTaxes(data, grossIncome)**: `expected_rate × grossIncome`
+- **computeCashSpendingYTD(cashSpendingRows, year)**: Sums absolute spending values for a given calendar year from cash_spending.csv.
+- **getAccountsWithMetadata(sources, manifest, currentMonthOnly, months)**: Returns accounts with manifest metadata applied and debts netted against linked assets.
 - **forwardFill(data)**: Fills missing months with last known value
-- **rollingAverage(values, window)**: Calculates rolling average
+- **rollingAverage(values, window)**: Calculates trailing rolling average
+- **rollingAverageCentered(values, window)**: Calculates centered rolling average
 
 ## Dashboard Sections & Charts
 
@@ -104,6 +130,8 @@ Both provide:
 
 ### Budget
 - **income sankey** (`budgetIncomeSankeyChart`): Sankey diagram loaded from `data/budget.yaml` (JS) + `web/data/budget.json` (Python-computed stock-price-dependent income). Flows: income sources → gross income → savings → tax-treatment buckets; → taxes; → spending → baseline/discretionary → line items; → unaccounted. Overrun warning drawn via plugin when savings + spending + taxes > income.
+- **progress** (`budgetProgressChart`): Horizontal stacked bar chart showing budget vs. actual spending per category for the current year.
+- **baseline** (`budgetBaselineChart`): Line chart tracking cumulative YTD cash spending vs. target baseline over the course of the year.
 - Budget data lives in `data/budget.yaml` (not committed). Python script `scripts/fetch-budget-data.py` only handles stock price fetches (RSU, ESPP); all other computation (savings, spending, taxes) is done in JS.
 - `computeBudgetSavings(entries)`: categorizes savings by account path segments (hsa/401k/roth/ira → tax-treatment label).
 - `computeBudgetSpending(data)`: handles flat dict (baseline) and `[{name, budget, value}]` array (discretionary); stores both `budget` and `spent` per item.
@@ -115,9 +143,18 @@ Both provide:
 
 ### Performance
 - **net worth growth** (`netWorthGrowthChart`): Line chart, YoY % change by month + dashed 12-month moving avg. Starts 1 year after earliest net worth data.
-- **portfolio performance** (`portfolioPerformanceChart`): Grouped bar chart by year. Estimated rate of return for `retirement securities`, `investment property`, `securities`. Formula: (end − start − contributions) / |start|. Investment property netted against linked debt.
+- **portfolio performance** (`portfolioPerformanceChart`): Grouped bar chart by year. Estimated rate of return for `retirement securities`, `investment property`, `securities` vs. S&P 500 benchmark line. Formula: (end − start − contributions) / |start|. Investment property netted against linked debt.
+
+### Retirement
+- **growth** (`retirementGrowthChart`): Stacked area line chart showing cumulative contributions vs. total retirement balance over time.
+- **tax allocation** (`retirementTaxAllocationChart`): Pie chart showing current retirement balance split by tax treatment (roth/traditional/hsa).
+
 ### Positions
-- **positions** (`retirementPositionsChart` + `nonRetirementPositionsChart`): Two treemap charts side by side. Latest forward-filled snapshot from `positions.csv`. Sized by value; tooltip shows expense ratio and dividend yield from `web/data/position_info.json` (generated by `scripts/fetch-position-info.py`).
+- **positions**: Multi-view treemap system. `createPositionsChart()` renders to different canvases depending on context:
+  - Interactive single-view mode: `positionsSingleChart` — toggles between overall/retirement/non-retirement/underlying/sectors views
+  - Print/PDF mode (5 separate charts): `allPositionsChart`, `retirementPositionsChart`, `nonRetirementPositionsChart`, `positionsUnderlyingPrintChart`, `positionsSectorsPrintChart`
+  - Sized by value; tooltip shows expense ratio and dividend yield from `web/data/position_info.json`
+  - Underlying holdings use `web/data/position_holdings.json`; sector data uses `web/data/position_sectors.json`
 
 ## Common Tasks
 
@@ -168,6 +205,7 @@ Semantic mapping keys:
 |-----|---------|
 | `background` / `backgroundAlt` | Chart/tooltip backgrounds |
 | `text` / `textSubtle` | Labels, ticks, legend |
+| `textDark` / `textDarkSubtle` | Labels for use on light backgrounds (defined in themes, currently unused in charts) |
 | `accent` / `accentAlt` | UI highlights |
 | `chart1`–`chart5` | Primary chart series colors |
 | `chartWarn` | Notable callouts (e.g. withdrawals) |
