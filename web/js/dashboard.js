@@ -441,21 +441,17 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 if (this.incomeData && this.dataLoadError === null) {
-                    let projectedIncome = null;
-                    if (this.budgetData) {
-                        const latestBudgetYear = Object.keys(this.budgetData).sort().pop();
-                        if (latestBudgetYear && !this.incomeData.years.includes(latestBudgetYear)) {
-                            projectedIncome = {
-                                year: latestBudgetYear,
-                                value: this.budgetData[latestBudgetYear]?.income?.total || 0
-                            };
-                        }
-                    }
+                    const projectedIncomes = this.budgetData
+                        ? Object.keys(this.budgetData)
+                            .filter(y => !this.incomeData.years.includes(y))
+                            .sort()
+                            .map(y => ({ year: y, value: this.budgetData[y]?.income?.total || 0 }))
+                        : [];
                     createIncomeChart(
                         'incomeChart',
                         this.incomeData,
                         this.theme.classified,
-                        projectedIncome
+                        projectedIncomes
                     );
                 }
 
@@ -480,11 +476,12 @@ document.addEventListener('alpine:init', () => {
 
                     let projectedTax = null;
                     if (this.budgetData) {
-                        const latestBudgetYear = Object.keys(this.budgetData).sort().pop();
-                        const yearData = this.budgetData[latestBudgetYear];
-                        if (latestBudgetYear && !this.incomeData.years.includes(latestBudgetYear) && yearData?.taxes?.total) {
+                        const currentProjectedYear = Object.keys(this.budgetData)
+                            .filter(y => !this.incomeData.years.includes(y)).sort()[0];
+                        const yearData = this.budgetData[currentProjectedYear];
+                        if (currentProjectedYear && yearData?.taxes?.total) {
                             projectedTax = {
-                                year: latestBudgetYear,
+                                year: currentProjectedYear,
                                 total: yearData.taxes.total,
                                 rate: yearData.taxes.rate
                             };
@@ -530,23 +527,23 @@ document.addEventListener('alpine:init', () => {
                         withdrawals: indices.map(({ i }) => this.savingsData.withdrawals[i])
                     };
 
-                    // Determine projected savings from budget config (latest year not yet in income.csv)
+                    // Determine projected savings from budget config (first year not yet in income.csv)
                     let projectedSavings = null;
                     if (this.budgetData) {
-                        const latestBudgetYear = Object.keys(this.budgetData).sort().pop();
-                        const yearData = this.budgetData[latestBudgetYear];
-                        const isProjected = latestBudgetYear && !this.incomeData?.years.includes(latestBudgetYear);
-                        if (isProjected && yearData?.savings) {
+                        const currentProjectedYear = Object.keys(this.budgetData)
+                            .filter(y => !this.incomeData?.years.includes(y)).sort()[0];
+                        const yearData = this.budgetData[currentProjectedYear];
+                        if (currentProjectedYear && yearData?.savings) {
                             projectedSavings = {
-                                year: latestBudgetYear,
+                                year: currentProjectedYear,
                                 by_category: yearData.savings.by_category,
                                 total: yearData.savings.totalGoal,
                                 projectedIncome: yearData.income?.total || null
                             };
                             // Ensure projected year appears in filteredSavings (it may have no savings.csv data yet)
-                            if (!filteredSavings.years.includes(latestBudgetYear) && latestBudgetYear >= since) {
+                            if (!filteredSavings.years.includes(currentProjectedYear) && currentProjectedYear >= since) {
                                 filteredSavings = {
-                                    years: [...filteredSavings.years, latestBudgetYear],
+                                    years: [...filteredSavings.years, currentProjectedYear],
                                     datasets: filteredSavings.datasets.map(ds => ({
                                         ...ds, data: [...ds.data, 0]
                                     })),
@@ -645,9 +642,11 @@ document.addEventListener('alpine:init', () => {
                         this.indexReturnsData
                     );
                 }
-                // Budget income Sankey — render the latest year
+                // Budget income Sankey — render the current projected year (first year not yet in income.csv)
                 if (this.budgetData && this.dataLoadError === null) {
-                    const latestYear = Object.keys(this.budgetData).sort().pop();
+                    const latestYear = (Object.keys(this.budgetData)
+                        .filter(y => !this.incomeData?.years.includes(y)).sort()[0])
+                        || Object.keys(this.budgetData).sort().pop();
                     const latestData = this.budgetData[latestYear];
                     if (latestData?.income) {
                         createBudgetIncomeSankeyChart(
