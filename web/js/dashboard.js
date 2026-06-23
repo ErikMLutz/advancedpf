@@ -205,29 +205,8 @@ document.addEventListener('alpine:init', () => {
                 const nwMonths = filteredData.map(d => d.month);
                 const nwValues = filteredData.map(d => d.value);
 
-                // Compute 2-year projection from last 12 months growth rate
-                let projection = null;
-                if (nwMonths.length >= 13) {
-                    const lastValue = nwValues[nwValues.length - 1];
-                    const value12moAgo = nwValues[nwValues.length - 13];
-                    if (value12moAgo > 0) {
-                        const annualRate = lastValue / value12moAgo - 1;
-                        const monthlyFactor = Math.pow(1 + annualRate, 1 / 12);
-                        const lastMonth = nwMonths[nwMonths.length - 1];
-                        const [lastYear, lastMon] = lastMonth.split('-').map(Number);
-                        const projMonths = [];
-                        const projValues = [];
-                        // Start with the last real point so the line connects
-                        projMonths.push(lastMonth);
-                        projValues.push(lastValue);
-                        for (let i = 1; i <= 24; i++) {
-                            const d = new Date(lastYear, lastMon - 1 + i, 1);
-                            projMonths.push(formatMonth(d));
-                            projValues.push(lastValue * Math.pow(monthlyFactor, i));
-                        }
-                        projection = { months: projMonths, values: projValues, annualRate };
-                    }
-                }
+                // Projection is computed after budget loads (needs savings goal)
+                const projection = null;
 
                 this.netWorthData = {
                     months: nwMonths,
@@ -399,6 +378,23 @@ document.addEventListener('alpine:init', () => {
                 } catch (e) {
                     console.warn('Could not load budget data:', e);
                     this.budgetData = null;
+                }
+
+                // Compute net worth projection now that budget savings goal is available.
+                // Build a per-year map of remaining savings so each projected month uses its own year's goal.
+                {
+                    const budgetSavingsByYear = {};
+                    if (this.budgetData) {
+                        Object.entries(this.budgetData).forEach(([year, data]) => {
+                            if (data?.savings) {
+                                budgetSavingsByYear[year] = (data.savings.totalGoal || 0) - (data.savings.total || 0);
+                            }
+                        });
+                    }
+                    this.netWorthData.projection = computeNetWorthProjection(
+                        nwMonths, nwValues, rawData.savings,
+                        Object.keys(budgetSavingsByYear).length > 0 ? budgetSavingsByYear : null
+                    );
                 }
 
                 this.dataLoadError = null;

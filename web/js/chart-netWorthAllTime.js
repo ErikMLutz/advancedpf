@@ -103,10 +103,27 @@ function createAllTimeNetWorthChart(canvasId, data, classified, categoryBreakdow
                             const value = context.parsed.y;
                             const month = context.label;
 
-                            // Projected months: show projected value + rate
+                            // Projected months: show value + breakdown of projection inputs
                             if (projMonthSet.has(month)) {
-                                const rateLabel = (projection.annualRate >= 0 ? '+' : '') + (projection.annualRate * 100).toFixed(1) + '%/yr';
-                                return ['projected: $' + fmtK(value, 1) + 'k', rateLabel];
+                                const fmt = r => (r >= 0 ? '+' : '') + (r * 100).toFixed(1) + '%/yr';
+                                const lines = ['projected: $' + fmtK(value, 1) + 'k', ''];
+                                if (projection.fallback) {
+                                    lines.push(fmt(projection.annualRate) + ' (12mo blended growth)');
+                                } else {
+                                    const year = month.split('-')[0];
+                                    const hasGoal = projection.budgetSavingsByYear?.[year] !== undefined;
+                                    if (hasGoal) {
+                                        lines.push('returns: ' + fmt(projection.returnRate) +
+                                            ' (' + projection.returnRateYears + 'yr avg implied)');
+                                        const contrib = projection.monthlyContribByYear?.[year] || 0;
+                                        if (contrib > 0) {
+                                            lines.push('savings: +$' + fmtK(contrib, 1) + 'k/mo (' + year + ' goal)');
+                                        }
+                                    } else {
+                                        lines.push(fmt(projection.blendedRate) + ' (12mo blended growth, no ' + year + ' goal)');
+                                    }
+                                }
+                                return lines;
                             }
 
                             if (!categoryBreakdowns || !categoryBreakdowns[month]) {

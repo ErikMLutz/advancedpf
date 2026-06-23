@@ -544,6 +544,130 @@ function computeBudgetSpending(spendingData) {
 }
 
 /**
+ * Compute 24-month net worth projection.
+ *
+ * Goals-based path (when budgetSavings is provided):
+ *   1. Derive implied annual return rate from the last 3 completed calendar years:
+ *      returnRate(Y) = (NW[end of Y] - NW[end of Y-1] - netSavings(Y)) / NW[end of Y-1]
+ *   2. Project: NW[m+1] = NW[m] × monthlyFactor + monthlyContrib
+ *      where monthlyContrib = budgetSavings.remaining / remainingMonths for months in the
+ *      budget year, 0 thereafter.
+ *
+ * Fallback (budgetSavings is null or insufficient history for return rate):
+ *   Uses last 12 months blended YoY growth rate with no separate contribution term.
+ *
+ * @param {string[]} nwMonths - Monthly labels ascending (YYYY-MM)
+ * @param {number[]} nwValues - Net worth values parallel to nwMonths
+ * @param {Array} savingsRows - rawData.savings rows: { year, account, amount }
+ * @param {Object<string, number> | null} budgetSavingsByYear
+ *   Map of year → remaining savings (totalGoal − totalValue). Each projected month
+ *   uses the contribution from its own year; years not in the map contribute 0.
+ * @returns {{ months: string[], values: number[], annualRate: number } | null}
+ */
+function computeNetWorthProjection(nwMonths, nwValues, savingsRows, budgetSavingsByYear = null) {
+    if (nwMonths.length < 2) return null;
+
+    const lastValue = nwValues[nwValues.length - 1];
+    const lastMonth = nwMonths[nwMonths.length - 1];
+    const [lastYear, lastMon] = lastMonth.split('-').map(Number);
+
+    // Always compute blended 12mo rate — used for years without savings goals
+    let blendedAnnualRate = null;
+    if (nwMonths.length >= 13) {
+        const value12moAgo = nwValues[nwValues.length - 13];
+        if (value12moAgo > 0) blendedAnnualRate = lastValue / value12moAgo - 1;
+    }
+
+    // getMonthlyFactor/getMonthlyContrib are per-month functions to allow mixed rates
+    function buildProjection(getMonthlyFactor, getMonthlyContrib, meta = {}) {
+        const projMonths = [lastMonth];
+        const projValues = [lastValue];
+        for (let i = 1; i <= 24; i++) {
+            const d = new Date(lastYear, lastMon - 1 + i, 1);
+            const projMonth = formatMonth(d);
+            projMonths.push(projMonth);
+            projValues.push(projValues[i - 1] * getMonthlyFactor(projMonth) + getMonthlyContrib(projMonth));
+        }
+        const effectiveAnnualRate = projValues.length > 12
+            ? (projValues[12] / projValues[0]) - 1
+            : (meta.returnRate ?? blendedAnnualRate ?? 0);
+        return { months: projMonths, values: projValues, annualRate: effectiveAnnualRate, ...meta };
+    }
+
+    if (budgetSavingsByYear !== null) {
+        // Build year → last known NW value (ascending months means last write per year = latest month)
+        const yearEndNW = {};
+        nwMonths.forEach((month, i) => {
+            yearEndNW[month.split('-')[0]] = nwValues[i];
+        });
+
+        // Build year → net savings (positive contributions + negative withdrawals)
+        const annualNetSavings = {};
+        (savingsRows || []).forEach(row => {
+            const y = String(row.year);
+            annualNetSavings[y] = (annualNetSavings[y] || 0) + (row.amount || 0);
+        });
+
+        const currentYear = String(new Date().getFullYear());
+        const completedYears = Object.keys(yearEndNW).sort().filter(y => y < currentYear);
+
+        const rates = [];
+        for (let i = completedYears.length - 1; i >= 1 && rates.length < 3; i--) {
+            const year = completedYears[i];
+            const prevYear = String(parseInt(year) - 1);
+            if (!yearEndNW[prevYear]) continue;
+            const nwStart = yearEndNW[prevYear];
+            if (nwStart <= 0) continue;
+            const nwEnd = yearEndNW[year];
+            const impliedReturns = nwEnd - nwStart - (annualNetSavings[year] || 0);
+            rates.push(impliedReturns / nwStart);
+        }
+
+        if (rates.length > 0) {
+            const returnAnnualRate = rates.reduce((a, b) => a + b, 0) / rates.length;
+            const returnFactor = Math.pow(1 + returnAnnualRate, 1 / 12);
+            // Fall back to return rate if blended isn't available (shouldn't happen in practice)
+            const blendedFactor = blendedAnnualRate !== null
+                ? Math.pow(1 + blendedAnnualRate, 1 / 12)
+                : returnFactor;
+
+            // For each budget year with goals, spread remaining evenly across its projected months
+            const monthlyContribByYear = {};
+            Object.keys(budgetSavingsByYear).forEach(year => {
+                let count = 0;
+                for (let i = 1; i <= 24; i++) {
+                    if (String(new Date(lastYear, lastMon - 1 + i, 1).getFullYear()) === year) count++;
+                }
+                monthlyContribByYear[year] = count > 0 ? budgetSavingsByYear[year] / count : 0;
+            });
+
+            // Years with goals: use decomposed return rate + explicit contribution
+            // Years without goals: use blended rate (already includes historical savings behavior)
+            const getMonthlyFactor = projMonth =>
+                budgetSavingsByYear[projMonth.split('-')[0]] !== undefined ? returnFactor : blendedFactor;
+            const getMonthlyContrib = projMonth =>
+                monthlyContribByYear[projMonth.split('-')[0]] || 0;
+
+            return buildProjection(getMonthlyFactor, getMonthlyContrib, {
+                returnRate: returnAnnualRate,
+                blendedRate: blendedAnnualRate,
+                returnRateYears: rates.length,
+                monthlyContribByYear,
+                budgetSavingsByYear
+            });
+        }
+    }
+
+    // Fallback: blended YoY growth rate for all months
+    if (blendedAnnualRate !== null) {
+        const factor = Math.pow(1 + blendedAnnualRate, 1 / 12);
+        return buildProjection(() => factor, () => 0, { fallback: true });
+    }
+
+    return null;
+}
+
+/**
  * Sum absolute spending values from cash_spending.csv for the given calendar year.
  * @param {Array} cashSpendingRows - Raw cash_spending CSV rows (date already parsed to Date)
  * @param {string} year - Four-digit year string, e.g. "2026"
