@@ -55,7 +55,7 @@ def fetch_historical_price(ticker: str, target_date: date) -> float:
     hist = hist[hist.index.date <= target_date]
     if hist.empty:
         raise ValueError(f'No price data for {ticker} on or before {target_date}')
-    return float(hist['Close'].iloc[-1])
+    return float(hist['Close'].squeeze().iloc[-1])
 
 
 def get_price(ticker: str, event_date: date, current_prices: dict) -> float:
@@ -226,13 +226,17 @@ def process_year(year: int, income: dict) -> dict:
     print('  computing ESPP...')
     espp = compute_espp(espp_entries, salary_ranges, current_prices, year)
 
-    total = salary + bonus + rsu + ltc + espp
+    match_rate = income.get('401k_match', 0)
+    match = (salary + bonus) * match_rate
+
+    total = salary + bonus + rsu + ltc + espp + match
     return {
         'salary': round(salary, 2),
         'bonus': round(bonus, 2),
         'RSU': round(rsu, 2),
         'LTC': round(ltc, 2),
         'ESPP': round(espp, 2),
+        '401k_match': round(match, 2),
         'total': round(total, 2),
     }
 

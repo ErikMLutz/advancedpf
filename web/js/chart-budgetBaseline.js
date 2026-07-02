@@ -120,11 +120,15 @@ function createBudgetBaselineChart(canvasId, totalBudget, creditByMonth, cashByM
                             }
                             const c = tooltipComponents[item.dataIndex];
                             if (!c) return null;
+                            const target = targetData[item.dataIndex];
+                            const diff = item.parsed.y - target;
+                            const diffStr = (diff >= 0 ? '+' : '−') + '$' + fmtK(Math.abs(diff)) + 'k';
                             return [
                                 `credit: $${fmtK(c.credit)}k`,
                                 `cash: $${fmtK(c.cash)}k`,
                                 `− discretionary: $${fmtK(c.disc)}k`,
                                 `total: $${fmtK(item.parsed.y)}k`,
+                                `target: $${fmtK(target)}k (${diffStr})`,
                             ];
                         }
                     }

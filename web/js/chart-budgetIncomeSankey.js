@@ -3,7 +3,7 @@
 /**
  * Create a Sankey diagram: income sources → gross income → savings/spending/unaccounted.
  * @param {string} canvasId
- * @param {Object} income   - { salary, bonus, RSU, LTC, ESPP, total }
+ * @param {Object} income   - { salary, bonus, RSU, LTC, ESPP, '401k_match', total }
  * @param {Object|null} savings  - { total, by_category }
  * @param {Object|null} spending - { total, sections: { baseline: { total, items }, ... } }
  * @param {Object|null} taxes   - { total, rate }
@@ -19,13 +19,14 @@ function createBudgetIncomeSankeyChart(canvasId, income, savings, spending, taxe
     }
 
     const incomeSourceColors = {
-        'salary': classified.chart1,
-        'bonus':  classified.chart2,
-        'rsu':    classified.chart3,
-        'ltc':    classified.chart4,
-        'espp':   classified.chart5,
+        'salary':     classified.chart1,
+        'bonus':      classified.chart2,
+        'rsu':        classified.chart3,
+        'ltc':        classified.chart4,
+        'espp':       classified.chart5,
+        '401k match': classified.accentAlt,
     };
-    const keyMap = { salary: 'salary', bonus: 'bonus', RSU: 'rsu', LTC: 'ltc', ESPP: 'espp' };
+    const keyMap = { salary: 'salary', bonus: 'bonus', RSU: 'rsu', LTC: 'ltc', ESPP: 'espp', '401k_match': '401k match' };
 
     const chartColors = [classified.chart1, classified.chart2, classified.chart3,
                          classified.chart4, classified.chart5];
