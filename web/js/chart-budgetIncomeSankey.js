@@ -114,7 +114,7 @@ function createBudgetIncomeSankeyChart(canvasId, income, savings, spending, taxe
             const msg = `⚠ overrun: planned savings + spending exceeds income by $${fmtK(Math.abs(unaccounted), 1)}k`;
             c.save();
             c.font = '300 12px sans-serif';
-            c.fillStyle = classified.chartAlarm;
+            c.fillStyle = classified.chartWarn;
             c.textAlign = 'center';
             c.fillText(msg, width / 2, height - 8);
             c.restore();
