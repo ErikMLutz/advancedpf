@@ -14,8 +14,7 @@ serve generate-sample-data="false" no-fetch="false":
         echo ""
     fi
     echo "Starting web server at http://localhost:8000"
-    echo "Visit http://localhost:8000/web/"
-    python3 -m http.server 8000
+    python3 scripts/serve.py 8000
 
 # Fetch S&P 500 annual returns and write to web/data/sp500_returns.json
 fetch-index-returns:
@@ -39,7 +38,7 @@ save-real-data:
 generate-pdf:
     @echo "Generating PDF..."
     @echo "Starting server in background..."
-    @python3 -m http.server 8000 --directory web &
+    @python3 scripts/serve.py 8000 &
     @sleep 2
     @echo "Open http://localhost:8000?auto-export=true in your browser"
     @echo "The PDF will auto-download, then close the browser"

@@ -30,18 +30,18 @@ const CONFIG = {
 
     // Data file paths (relative to server root)
     dataPaths: {
-        cash: '/data/cash.csv',
-        property: '/data/property.csv',
-        debt: '/data/debt.csv',
-        securities: '/data/securities.csv',
-        credit: '/data/credit.csv',
-        manifest: '/data/manifest.yaml',
-        income: '/data/income.csv',
-        savings: '/data/savings.csv',
-        positions: '/data/positions.csv',
-        budgetConfig: '/data/budget.yaml',
-        budgetData: '/web/data/budget.json',
-        cashSpending: '/data/cash_spending.csv'
+        cash: '/realdata/cash.csv',
+        property: '/realdata/property.csv',
+        debt: '/realdata/debt.csv',
+        securities: '/realdata/securities.csv',
+        credit: '/realdata/credit.csv',
+        manifest: '/realdata/manifest.yaml',
+        income: '/realdata/income.csv',
+        savings: '/realdata/savings.csv',
+        positions: '/realdata/positions.csv',
+        budgetConfig: '/realdata/budget.yaml',
+        budgetData: '/data/budget.json',
+        cashSpending: '/realdata/cash_spending.csv'
     },
 
     // Chart display options
