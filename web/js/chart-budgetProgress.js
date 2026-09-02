@@ -122,9 +122,10 @@ function createBudgetProgressChart(canvasId, rows, classified) {
                             const i = item.dataIndex;
                             const spent = spentData[i] + overrunData[i];
                             const annualBudget = spentData[i] + remainingData[i] + overrunData[i];
+                            const isSavings = rows[i].type === 'savings';
                             return [
-                                `spent: $${fmtK(spent)}k`,
-                                `annual budget: $${fmtK(annualBudget)}k`,
+                                `${isSavings ? 'saved' : 'spent'}: $${fmtK(spent)}k`,
+                                `${isSavings ? 'target' : 'annual budget'}: $${fmtK(annualBudget)}k`,
                             ];
                         }
                     }
