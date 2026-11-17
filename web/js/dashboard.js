@@ -675,42 +675,37 @@ document.addEventListener('alpine:init', () => {
                         createBudgetProgressChart('budgetSpendingProgressChart', spendingRows, this.theme.classified);
                     }
 
-                    // Budget baseline chart (line: combined actual vs straight-line target)
+                    // Budget baseline chart (single horizontal bar: YTD actual vs annual baseline budget)
                     const baselineTotal = latestData?.spending?.sections?.baseline?.total;
                     if (baselineTotal > 0) {
                         const totalDiscretionaryActual = Object.values(
                             latestData?.spending?.sections?.discretionary?.items || {}
                         ).reduce((sum, item) => sum + (item.spent || 0), 0) || 0;
-
-                        // Monthly credit spending for budget year
-                        const creditByMonth = new Array(12).fill(0);
-                        (this.creditSpendingData || [])
-                            .filter(d => d.month.startsWith(latestYear))
-                            .forEach(d => {
-                                const m = parseInt(d.month.split('-')[1]) - 1;
-                                creditByMonth[m] = Math.abs(d.value);
-                            });
-
-                        // Monthly cash spending for budget year (includes mortgage)
-                        const cashByMonth = new Array(12).fill(0);
-                        if (this.cashSpendingData) {
-                            this.cashSpendingData.valueByMonth(48)
-                                .filter(d => d.month.startsWith(latestYear))
-                                .forEach(d => {
-                                    const m = parseInt(d.month.split('-')[1]) - 1;
-                                    cashByMonth[m] = Math.abs(d.value);
-                                });
-                        }
-
-                        createBudgetBaselineChart(
-                            'budgetBaselineChart',
-                            baselineTotal,
-                            creditByMonth,
-                            cashByMonth,
-                            totalDiscretionaryActual,
-                            this.theme.classified,
-                            latestYear
+                        const baselineActual = Math.round(
+                            (latestData?.creditYTD || 0) + (latestData?.cashSpendingYTD || 0) - totalDiscretionaryActual
                         );
+                        const credit = Math.round(latestData?.creditYTD || 0);
+                        const cash = Math.round(latestData?.cashSpendingYTD || 0);
+                        const disc = Math.round(totalDiscretionaryActual);
+                        // expected spend to date: straight-line, through the end of the current month
+                        const now = new Date();
+                        const yr = parseInt(latestYear);
+                        const monthsElapsed = now.getFullYear() > yr ? 12 : now.getFullYear() < yr ? 0 : now.getMonth() + 1;
+                        const expected = Math.round(baselineTotal / 12 * monthsElapsed);
+                        const diff = baselineActual - expected;
+                        const diffStr = (diff >= 0 ? '+' : '−') + '$' + fmtK(Math.abs(diff)) + 'k';
+                        createBudgetProgressChart('budgetBaselineChart', [{
+                            label: 'baseline', annualBudget: baselineTotal, actual: baselineActual, type: 'discretionary',
+                            marker: { value: expected, label: 'target' },
+                            details: [
+                                `credit: $${fmtK(credit)}k`,
+                                `cash: $${fmtK(cash)}k`,
+                                `− discretionary: $${fmtK(disc)}k`,
+                                `total: $${fmtK(baselineActual)}k`,
+                                `target: $${fmtK(expected)}k (${diffStr})`,
+                                `annual budget: $${fmtK(baselineTotal)}k`,
+                            ]
+                        }], this.theme.classified);
                     }
                 }
 

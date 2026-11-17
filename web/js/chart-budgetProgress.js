@@ -5,6 +5,8 @@
  * @param {string} canvasId
  * @param {Array}  rows       - [{ label, annualBudget, actual, type }]
  *                              type: 'savings' | 'discretionary'
+ *                              optional: marker { value, label } — vertical line at value
+ *                              optional: details [string] — replaces default tooltip lines
  * @param {Object} classified
  */
 function createBudgetProgressChart(canvasId, rows, classified) {
@@ -62,10 +64,10 @@ function createBudgetProgressChart(canvasId, rows, classified) {
             c.textBaseline = 'middle';
 
             chart.getDatasetMeta(0).data.forEach((bar, i) => {
-                const total = spentData[i] + remainingData[i] + overrunData[i];
+                const target = rows[i].annualBudget;
                 const spent = spentData[i] + overrunData[i];
-                if (total <= 0) return;
-                const pct = Math.round(spent / total * 100);
+                if (target <= 0) return;
+                const pct = Math.round(spent / target * 100);
                 let rightX = bar.x;
                 for (let di = 0; di < chart.data.datasets.length; di++) {
                     const m = chart.getDatasetMeta(di);
@@ -78,9 +80,39 @@ function createBudgetProgressChart(canvasId, rows, classified) {
         }
     };
 
+    const hasMarker = rows.some(r => r.marker);
+    const markerPlugin = {
+        id: canvasId + 'Marker',
+        afterDatasetsDraw(chart) {
+            const { ctx: c, chartArea, scales } = chart;
+            c.save();
+            c.strokeStyle = classified.text;
+            c.fillStyle = classified.textSubtle;
+            c.font = '11px sans-serif';
+            c.textAlign = 'center';
+            c.textBaseline = 'bottom';
+            c.lineWidth = 1.5;
+            c.setLineDash([4, 3]);
+            chart.getDatasetMeta(0).data.forEach((bar, i) => {
+                const m = rows[i].marker;
+                if (!m) return;
+                const x = scales.x.getPixelForValue(m.value);
+                const half = bar.height / 2 + 4;
+                c.beginPath();
+                c.moveTo(x, bar.y - half);
+                c.lineTo(x, bar.y + half);
+                c.stroke();
+                if (m.label) c.fillText(m.label, x, bar.y - half - 2);
+            });
+            c.restore();
+        }
+    };
+    const xMax = Math.max(...rows.map((r, i) =>
+        Math.max(r.annualBudget, r.actual, r.marker?.value || 0)));
+
     window[canvasId] = new Chart(ctx, {
         type: 'bar',
-        plugins: [pctPlugin],
+        plugins: hasMarker ? [pctPlugin, markerPlugin] : [pctPlugin],
         data: {
             labels,
             datasets: [
@@ -93,9 +125,9 @@ function createBudgetProgressChart(canvasId, rows, classified) {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
-            layout: { padding: { right: 40 } },
+            layout: { padding: { right: 48, top: hasMarker ? 16 : 0 } },
             scales: {
-                x: { stacked: true, display: false, grid: { display: false } },
+                x: { stacked: true, display: false, grid: { display: false }, suggestedMax: xMax },
                 y: {
                     stacked: true,
                     grid: { display: false },
@@ -120,6 +152,7 @@ function createBudgetProgressChart(canvasId, rows, classified) {
                         label(item) {
                             if (item.datasetIndex !== 0) return null;
                             const i = item.dataIndex;
+                            if (rows[i].details) return rows[i].details;
                             const spent = spentData[i] + overrunData[i];
                             const annualBudget = spentData[i] + remainingData[i] + overrunData[i];
                             const isSavings = rows[i].type === 'savings';
