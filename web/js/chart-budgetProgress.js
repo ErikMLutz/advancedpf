@@ -31,7 +31,7 @@ function createBudgetProgressChart(canvasId, rows, classified) {
         const target = row.annualBudget;
         const spent = row.actual;
         const fillColor = row.type === 'savings' ? classified.accent : classified.chart3;
-        const overrunColor = row.type === 'savings' ? classified.accent : classified.chartWarn;
+        const overrunColor = row.type === 'savings' ? classified.accentAlt : classified.chartWarn;
 
         labels.push(row.label);
         spentColors.push(fillColor);
