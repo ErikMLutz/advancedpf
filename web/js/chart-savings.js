@@ -27,13 +27,54 @@ function createSavingsChart(canvasId, data, classified, savingsRates = [], proje
         ? data.years.indexOf(projectedSavings.year)
         : -1;
 
-    const datasets = data.datasets.map((ds, i) => ({
-        label: ds.category,
-        data: ds.data,
-        backgroundColor: chartColors[i % chartColors.length],
-        borderWidth: 0,
-        stack: 'savings'
-    }));
+    // In the projected (budget) year, saved-so-far comes from the budget config's `value`
+    // (savings.csv usually has nothing for that year yet). Use whichever is larger.
+    // A category over its goal is split into the goal portion plus an "over" segment
+    // stacked directly above it, so it reads as target + extra.
+    const budgetEntry = (category) => projectedSavings?.by_category[category];
+    const goalOf = (category) => {
+        const e = budgetEntry(category);
+        return e?.goal ?? (typeof e === 'number' ? e : 0);
+    };
+    const actualOf = (category, csvValue) => {
+        const e = budgetEntry(category);
+        return Math.max(csvValue || 0, (e && typeof e === 'object' ? e.value : 0) || 0);
+    };
+
+    const allCategories = [
+        ...data.datasets.map(ds => ds.category),
+        ...(projectedSavings ? Object.keys(projectedSavings.by_category) : []).filter(
+            cat => !data.datasets.some(ds => ds.category === cat)
+        )
+    ];
+
+    const datasets = allCategories.flatMap((category, i) => {
+        const color = chartColors[i % chartColors.length];
+        const ds = data.datasets.find(d => d.category === category);
+        const values = ds ? ds.data : data.years.map(() => 0);
+        const base = {
+            label: category,
+            data: values,
+            backgroundColor: color,
+            borderWidth: 0,
+            stack: 'savings'
+        };
+        if (!projectedSavings || projectedIdx < 0) return [base];
+
+        const planned = goalOf(category);
+        const actual = actualOf(category, values[projectedIdx]);
+        if (!ds && actual <= 0) return []; // budget-only category with nothing saved yet: planned bar only
+        base.data = values.map((v, yi) => yi !== projectedIdx ? v : (planned > 0 ? Math.min(actual, planned) : actual));
+        if (!(planned > 0) || actual <= planned) return [base];
+
+        return [base, {
+            label: category + ' (over)',
+            data: data.years.map((_, yi) => yi === projectedIdx ? actual - planned : null),
+            backgroundColor: classified.accentAlt,
+            borderWidth: 0,
+            stack: 'savings'
+        }];
+    });
 
     // Withdrawals as a separate negative bar below zero (only include if any are non-zero)
     if (data.withdrawals && data.withdrawals.some(v => v !== 0)) {
@@ -48,17 +89,10 @@ function createSavingsChart(canvasId, data, classified, savingsRates = [], proje
 
     // Projected dashed bars: one dataset per category showing the remaining planned amount
     if (projectedSavings && projectedIdx >= 0) {
-        const allCategories = [
-            ...data.datasets.map(ds => ds.category),
-            ...Object.keys(projectedSavings.by_category).filter(
-                cat => !data.datasets.some(ds => ds.category === cat)
-            )
-        ];
-
         allCategories.forEach((category, i) => {
-            const planned = projectedSavings.by_category[category]?.goal ?? projectedSavings.by_category[category] ?? 0;
+            const planned = goalOf(category);
             const actualDs = data.datasets.find(ds => ds.category === category);
-            const actual = actualDs ? (actualDs.data[projectedIdx] || 0) : 0;
+            const actual = actualOf(category, actualDs ? actualDs.data[projectedIdx] : 0);
             const remaining = Math.max(0, planned - actual);
             if (remaining <= 0) return;
 
@@ -127,6 +161,29 @@ function createSavingsChart(canvasId, data, classified, savingsRates = [], proje
         }
     };
 
+    // Tooltip content. In the projected year show each category's total planned amount
+    // (not what's left) plus any overage; other years show the plain stacked values.
+    function tooltipLine(context) {
+        const label = context.dataset.label;
+        const value = context.parsed.y;
+        const isProjectedCol = projectedSavings && context.dataIndex === projectedIdx;
+        if (!isProjectedCol || label === 'withdrawals') {
+            return value ? { text: label, value } : null;
+        }
+        if (label.endsWith(' (over)')) {
+            return value ? { text: label.replace(' (over)', ' over target'), value } : null;
+        }
+        if (label.endsWith(' (planned)')) {
+            const category = label.replace(' (planned)', '');
+            // The solid dataset already reports the planned amount if the category has one
+            const hasSolid = context.chart.data.datasets.some(d => d.label === category);
+            return hasSolid ? null : { text: category + ' planned', value: goalOf(category) };
+        }
+        const planned = goalOf(label);
+        if (planned > 0) return { text: label + ' planned', value: planned };
+        return value ? { text: label, value } : null;
+    }
+
     window.savingsChart = new Chart(ctx, {
         type: 'bar',
         plugins: [combinedPlugin],
@@ -148,8 +205,8 @@ function createSavingsChart(canvasId, data, classified, savingsRates = [], proje
                         font: { size: 11, weight: 300 },
                         boxWidth: 12,
                         padding: 12,
-                        // Hide projected datasets from legend — dashed bars are self-explanatory
-                        filter: (item) => !item.text.includes('(planned)')
+                        // Hide projected/over datasets from legend — dashed bars and overage are self-explanatory
+                        filter: (item) => !item.text.includes('(planned)') && !item.text.includes('(over)')
                     }
                 },
                 tooltip: {
@@ -161,13 +218,11 @@ function createSavingsChart(canvasId, data, classified, savingsRates = [], proje
                     padding: 12,
                     callbacks: {
                         label: function(context) {
-                            const value = context.parsed.y;
-                            if (!value) return null;
-                            const label = context.dataset.label.replace(' (planned)', ' planned');
-                            return `${label}: $${fmtK(value, 1)}k`;
+                            const line = tooltipLine(context);
+                            return line ? `${line.text}: $${fmtK(line.value, 1)}k` : null;
                         },
                         footer: function(items) {
-                            const total = items.reduce((sum, item) => sum + item.parsed.y, 0);
+                            const total = items.reduce((sum, item) => sum + (tooltipLine(item)?.value || 0), 0);
                             return `total: $${fmtK(total, 1)}k`;
                         }
                     }

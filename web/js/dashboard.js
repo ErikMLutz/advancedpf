@@ -559,7 +559,15 @@ document.addEventListener('alpine:init', () => {
                         // For the projected year use planned totals / projected income
                         if (projectedSavings && year === projectedSavings.year) {
                             if (!projectedSavings.projectedIncome || !projectedSavings.total) return null;
-                            return Math.round(projectedSavings.total / projectedSavings.projectedIncome * 100);
+                            // Target + any oversave: each category counts as max(goal, saved so far)
+                            const csvByCategory = {};
+                            filteredSavings.datasets.forEach(ds => { csvByCategory[ds.category] = ds.data[yearIdx] || 0; });
+                            const projectedTotal = Object.entries(projectedSavings.by_category).reduce((sum, [cat, e]) => {
+                                const goal = e?.goal ?? (typeof e === 'number' ? e : 0);
+                                const saved = Math.max(csvByCategory[cat] || 0, (e && typeof e === 'object' ? e.value : 0) || 0);
+                                return sum + Math.max(goal, saved);
+                            }, 0);
+                            return Math.round(projectedTotal / projectedSavings.projectedIncome * 100);
                         }
                         const income = incomeByYear[year];
                         if (!income) return null;
