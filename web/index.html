@@ -91,7 +91,7 @@
         </div>
 
         <!-- Top Right Icons -->
-        <div class="fixed top-6 right-6 flex items-center gap-3 z-40">
+        <div class="top-icons absolute top-4 right-4 md:top-6 md:right-6 flex items-center gap-3 z-40">
             <!-- GitHub Link -->
             <a href="https://github.com/erikmlutz/advancedpf"
                target="_blank"
@@ -928,7 +928,7 @@
                 </div>
 
                 <!-- Two Charts Side by Side -->
-                <div x-show="!hasError" class="w-full grid grid-cols-2 gap-8 mb-8">
+                <div x-show="!hasError" class="w-full chart-pair grid grid-cols-2 gap-8 mb-8">
                     <!-- Left: 12 Month Net Worth -->
                     <div>
                         <h2 class="text-xl font-light mb-4"
@@ -1004,7 +1004,7 @@
                     </div>
 
                     <!-- Income + Credit Spending Side by Side -->
-                    <div class="grid grid-cols-2 gap-8 mb-8">
+                    <div class="chart-pair grid grid-cols-2 gap-8 mb-8">
                         <!-- Income Chart -->
                         <div>
                             <h2 class="text-xl font-light mb-4"
@@ -1079,7 +1079,7 @@
                         </h2>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-8 mb-8">
+                    <div class="chart-pair grid grid-cols-2 gap-8 mb-8">
                         <div>
                             <h2 class="text-xl font-light mb-4"
                                 :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
@@ -1173,7 +1173,7 @@
                                 <canvas id="allPositionsChart"></canvas>
                             </div>
                         </div>
-                        <div class="flex gap-6" style="height: 300px;">
+                        <div class="positions-row flex gap-6" style="height: 300px;">
                             <div class="flex-1 flex flex-col">
                                 <h2 class="text-xl font-light mb-4"
                                     :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
@@ -1194,7 +1194,7 @@
                             </div>
                         </div>
                         <!-- Underlying + Sectors (half-width each, bottom row) -->
-                        <div class="flex gap-6 mt-8" style="height: 300px;">
+                        <div class="positions-row flex gap-6 mt-8" style="height: 300px;">
                             <div class="flex-1 flex flex-col">
                                 <h2 class="text-xl font-light mb-4"
                                     :style="`color: ${theme ? theme.classified.textSubtle : textColor};`">
@@ -1237,7 +1237,7 @@
                                         <span class="opacity-50 text-base ml-1"
                                               x-text="`(${formatAccountCurrency(accountsData.nonRetirementTotal)})`"></span>
                                     </h2>
-                                    <table class="w-full" style="table-layout: fixed;">
+                                    <table class="accounts-table w-full" style="table-layout: fixed;">
                                         <colgroup>
                                             <col style="width: 40%;">
                                             <col style="width: 25%;">
@@ -1260,6 +1260,8 @@
                                                         :style="`color: ${row.isSubRow ? theme.classified.textSubtle : theme.classified.text};`">
                                                         <span x-show="row.isSubRow" class="mr-1 opacity-40">↳</span>
                                                         <span x-text="row.title"></span>
+                                                        <div class="acct-meta mt-1" :style="`color: ${theme.classified.textSubtle};`" style="font-size: 0.7rem; line-height: 1.4;"
+                                                             x-text="[row.category, row.taxTreatment !== 'taxable' ? row.taxTreatment : ''].filter(Boolean).join(' · ')"></div>
                                                         <template x-if="row.positions && row.positions.length > 0">
                                                             <div class="mt-1" :style="`color: ${theme.classified.textSubtle};`" style="font-size: 0.7rem; line-height: 1.4;">
                                                                 <template x-for="pos in row.positions" :key="pos.ticker">
@@ -1298,7 +1300,7 @@
                                         <span class="opacity-50 text-base ml-1"
                                               x-text="`(${formatAccountCurrency(accountsData.retirementTotal)})`"></span>
                                     </h2>
-                                    <table class="w-full" style="table-layout: fixed;">
+                                    <table class="accounts-table w-full" style="table-layout: fixed;">
                                         <colgroup>
                                             <col style="width: 40%;">
                                             <col style="width: 25%;">
@@ -1319,6 +1321,8 @@
                                                     <td class="py-3 font-light"
                                                         :style="`color: ${theme.classified.text};`">
                                                         <span x-text="row.title"></span>
+                                                        <div class="acct-meta mt-1" :style="`color: ${theme.classified.textSubtle};`" style="font-size: 0.7rem; line-height: 1.4;"
+                                                             x-text="[row.category, row.taxTreatment !== 'taxable' ? row.taxTreatment : ''].filter(Boolean).join(' · ')"></div>
                                                         <template x-if="row.positions && row.positions.length > 0">
                                                             <div class="mt-1" :style="`color: ${theme.classified.textSubtle};`" style="font-size: 0.7rem; line-height: 1.4;">
                                                                 <template x-for="pos in row.positions" :key="pos.ticker">
@@ -1408,6 +1412,30 @@
 
         /* Remove browser default page margins so background fills edge-to-edge */
         @page { margin: 0; }
+
+        .acct-meta { display: none; }
+
+        /* Mobile: no horizontal scroll, charts never sit side by side */
+        @media screen and (max-width: 767px) {
+            html, body { overflow-x: hidden; max-width: 100%; }
+            .chart-pair { grid-template-columns: minmax(0, 1fr) !important; }
+            .chart-pair > * { min-width: 0; }
+            .positions-row { flex-direction: column; height: auto !important; }
+            .positions-row > div { flex: none !important; height: 300px; min-width: 0; }
+            .acct-meta { display: block; }
+            .accounts-table col:nth-child(2), .accounts-table col:nth-child(3),
+            .accounts-table th:nth-child(2), .accounts-table th:nth-child(3),
+            .accounts-table td:nth-child(2), .accounts-table td:nth-child(3) { display: none; }
+            .accounts-table col:nth-child(1) { width: 60% !important; }
+            .accounts-table col:nth-child(4) { width: 40% !important; }
+            .accounts-table td:nth-child(1) { padding-right: 0.5rem; overflow-wrap: anywhere; }
+            .accounts-table td:nth-child(4) span:nth-child(2) { display: block; margin-left: 0; }
+        }
+
+        @media print {
+            /* Hide top-right icons (absolute, so .fixed rule doesn't catch them) */
+            .top-icons { display: none !important; }
+        }
 
         @media print {
             /* Render colors exactly as on screen */
