@@ -153,8 +153,8 @@ function createBudgetProgressChart(canvasId, rows, classified) {
                             if (item.datasetIndex !== 0) return null;
                             const i = item.dataIndex;
                             if (rows[i].details) return rows[i].details;
-                            const spent = spentData[i] + overrunData[i];
-                            const annualBudget = spentData[i] + remainingData[i] + overrunData[i];
+                            const spent = rows[i].actual;
+                            const annualBudget = rows[i].annualBudget;
                             const isSavings = rows[i].type === 'savings';
                             return [
                                 `${isSavings ? 'saved' : 'spent'}: $${fmtK(spent)}k`,
